@@ -1,0 +1,257 @@
+// 中醫診所 LINE 預約系統 - 實體關係模型
+// 版本: 1.0
+// 日期: 2026-01-10
+
+Table patients {
+  id string [pk, note: '病患唯一識別碼']
+  line_user_id string [unique, note: 'LINE User ID，用於 LINE 平台身分識別']
+  name string [not null, note: '病患姓名，2-20 字元，中英文皆可']
+  phone string [not null, note: '電話號碼，台灣手機格式 09xxxxxxxx']
+  national_id string [not null, unique, note: '身分證字號，台灣身分證格式：1個英文字母（有效縣市代碼）+ 1個性別碼（1=男, 2=女）+ 8個數字 + 1個檢查碼，需驗證檢查碼正確性']
+  birth_date string [not null, note: '出生年月日，日期格式，不可為未來日期']
+  notes string [note: '病患備註，內部註記（病患不可見），如特殊需求、過敏史、注意事項']
+  no_show_count int [default: 0, note: '未報到次數，累計未報到次數，0 <= no_show_count <= 3（達到 3 次後停止累計）']
+  is_blacklisted bool [default: false, note: '黑名單狀態，是否在黑名單中']
+  created_at string [default: 'now()', note: '建立時間']
+  updated_at string [default: 'now()', note: '更新時間']
+  
+  Note: '''
+    病患資料實體
+    用途：儲存病患的基本資料與狀態
+    唯一識別：LINE User ID + 身分證字號
+    關聯：1:N appointments, 1:1 blacklist
+    跨屬性不變條件：
+    - 未報到次數 >= 3 時，is_blacklisted 自動設為 true（批次處理：每日檢查並更新）
+  '''
+}
+
+Table doctors {
+  id string [pk, note: '醫師唯一識別碼']
+  name string [not null, note: '醫師姓名']
+  is_active bool [default: true, note: '醫師狀態，啟用/停用']
+  created_at string [default: 'now()', note: '建立時間']
+  updated_at string [default: 'now()', note: '更新時間']
+  
+  Note: '''
+    醫師資料實體
+    用途：儲存醫師基本資料與狀態
+    關聯：1:N schedules, 1:N appointments, N:M treatment_types (透過 doctor_treatments)
+    停用處理：當 is_active = false 時，自動取消所有未來預約並通知病患
+  '''
+}
+
+Table treatment_types {
+  id string [pk, note: '診療類型唯一識別碼']
+  name string [not null, note: '診療項目名稱，如初診、內科、針灸']
+  duration_minutes int [not null, note: '扣除分鐘數，此診療項目需要的時間分鐘數，0 < duration_minutes <= 30（不可超過單一時段長度）']
+  is_active bool [default: true, note: '診療類型狀態，啟用/停用']
+  sort_order int [default: 0, note: '排序順序，用於顯示順序']
+  created_at string [default: 'now()', note: '建立時間']
+  updated_at string [default: 'now()', note: '更新時間']
+  
+  Note: '''
+    診療類型實體
+    用途：定義可預約的診療項目及其所需時間
+    預設項目：初診(10分鐘)、內科(5分鐘)、針灸(5分鐘)
+    關聯：N:M doctors (透過 doctor_treatments), 1:N appointments
+    停用處理：當 is_active = false 時，自動取消所有使用此類型的未來預約並通知病患
+  '''
+}
+
+Table doctor_treatments {
+  id string [pk, note: '醫師診療項目關聯唯一識別碼']
+  doctor_id string [not null, note: '醫師 ID']
+  treatment_type_id string [not null, note: '診療類型 ID']
+  
+  indexes {
+    (doctor_id, treatment_type_id) [unique]
+  }
+  
+  Note: '''
+    醫師診療項目關聯實體（多對多中介表）
+    用途：記錄醫師可看診的診療項目
+    唯一性：同一醫師不可重複關聯相同診療項目
+  '''
+}
+
+Table schedules {
+  id string [pk, note: '班表唯一識別碼']
+  doctor_id string [not null, note: '醫師 ID']
+  date string [not null, note: '班表日期']
+  is_available bool [default: true, note: '是否可預約，從 false 改回 true 僅限未來日期']
+  created_at string [default: 'now()', note: '建立時間']
+  updated_at string [default: 'now()', note: '更新時間']
+  
+  indexes {
+    (doctor_id, date) [unique]
+  }
+  
+  Note: '''
+    班表實體
+    用途：記錄醫師每日的值班狀態
+    唯一性：同一醫師在同一日期只能有一筆班表
+    關聯：N:1 doctors, 1:N time_slots
+  '''
+}
+
+Table time_slots {
+  id string [pk, note: '時段唯一識別碼']
+  schedule_id string [not null, note: '班表 ID']
+  start_time string [not null, note: '時段開始時間']
+  end_time string [not null, note: '時段結束時間']
+  total_minutes int [default: 30, note: '時段總分鐘數，每時段可預約總分鐘，預設 30']
+  remaining_minutes int [default: 30, note: '剩餘可預約分鐘數，剩餘分鐘數 < 診療所需分鐘數時該時段不可選，>= 0，當 remaining_minutes = 0 時不可手動調整']
+  created_at string [default: 'now()', note: '建立時間']
+  updated_at string [default: 'now()', note: '更新時間']
+  
+  Note: '''
+    時段實體
+    用途：記錄每個班表的具體時段與剩餘可預約時間
+    關聯：N:1 schedules, 1:N appointments
+    跨屬性不變條件：
+    - 0 <= remaining_minutes <= total_minutes
+    - 預約時：remaining_minutes -= treatment_type.duration_minutes
+    - 取消時：remaining_minutes += treatment_type.duration_minutes
+  '''
+}
+
+Table appointments {
+  id string [pk, note: '預約唯一識別碼']
+  patient_id string [not null, note: '病患 ID']
+  doctor_id string [not null, note: '醫師 ID']
+  treatment_type_id string [not null, note: '診療類型 ID']
+  time_slot_id string [not null, note: '時段 ID']
+  appointment_date string [not null, note: '預約日期']
+  status string [default: 'booked', note: '預約狀態：booked(已預約), checked_in(已報到), completed(已完成), no_show(未報到), cancelled(已取消)']
+  cancelled_reason string [note: '取消原因']
+  cancelled_by string [note: '取消操作者 ID']
+  created_at string [default: 'now()', note: '建立時間']
+  updated_at string [default: 'now()', note: '更新時間']
+  
+  indexes {
+    (patient_id, appointment_date) [unique, note: '每位病患每日限預約 1 次，不包含 cancelled、no_show、completed 狀態']
+  }
+  
+  Note: '''
+    預約實體
+    用途：記錄病患的預約資訊與狀態
+    關聯：N:1 patients, N:1 doctors, N:1 treatment_types, N:1 time_slots
+    狀態流轉：
+    - 正常流程：已預約 → 已報到 → 已完成
+    - 異常流程：已預約 → 未報到（可補救改為已報到）/ 已取消（終止）
+    - 終止狀態：已完成（不可變更）、已取消（不可變更）
+    - 補救流程：未報到 → 已報到（允許補報到）
+    業務規則：
+    - 每位病患每日限預約 1 次（整間診所）
+    - 每次預約僅限 1 個診療項目
+    - 當日預約時段結束後，系統自動將「已預約」改為「未報到」
+  '''
+}
+
+Table blacklist {
+  id string [pk, note: '黑名單唯一識別碼']
+  patient_id string [not null, unique, note: '病患 ID']
+  reason string [note: '加入黑名單原因']
+  created_by string [note: '操作者 ID']
+  created_at string [default: 'now()', note: '建立時間']
+  
+  Note: '''
+    黑名單實體
+    用途：記錄被加入黑名單的病患
+    關聯：1:1 patients
+    觸發條件：未報到累計 >= 3 次自動加入
+    效果：永久無法使用預約系統
+    解除：僅限超級管理員手動解除
+  '''
+}
+
+Table admin_users {
+  id string [pk, note: '管理員唯一識別碼']
+  email string [not null, unique, note: '管理員帳號（Email）']
+  password_hash string [not null, note: '密碼雜湊值，使用 bcrypt 加密']
+  name string [not null, note: '管理員姓名']
+  role string [default: 'admin', note: '管理員角色：admin(管理員), super_admin(超級管理員)']
+  is_active bool [default: true, note: '帳號狀態，啟用/停用']
+  language string [default: 'zh-TW', note: '語言設定，zh-TW(繁體中文), en(英文)']
+  timezone string [default: 'Asia/Taipei', note: '時區設定']
+  failed_login_count int [default: 0, note: '登入失敗次數，>= 0，登入成功時重置為 0']
+  locked_until string [note: '帳號鎖定時間，登入失敗 5 次鎖定 15 分鐘']
+  created_at string [default: 'now()', note: '建立時間']
+  updated_at string [default: 'now()', note: '更新時間']
+  
+  Note: '''
+    後台管理員帳號實體
+    用途：儲存後台管理員的帳號資訊與權限
+    關聯：1:N operation_logs
+    安全機制：
+    - 密碼加密儲存（bcrypt）
+    - 登入失敗 5 次鎖定 15 分鐘
+    - Session 有效期 24 小時
+    密碼規則：
+    - 最小長度 8 字元
+    - 需包含大寫、小寫、數字
+  '''
+}
+
+Table verification_codes {
+  id string [pk, note: '驗證碼唯一識別碼']
+  line_user_id string [not null, note: 'LINE User ID']
+  code string [not null, note: '驗證碼，6 位數字']
+  attempts int [default: 0, note: '驗證嘗試次數，>= 0']
+  expires_at string [not null, note: '過期時間，有效期 5 分鐘']
+  used_at string [note: '使用時間']
+  created_at string [default: 'now()', note: '建立時間']
+  
+  Note: '''
+    驗證碼實體
+    用途：儲存真人驗證的驗證碼資訊
+    驗證碼規則：
+    - 長度：6 位數字
+    - 有效期：5 分鐘
+    - 錯誤上限：5 次（超過需重新發送）
+    - 重新發送限制：60 秒內 1 次
+    記錄處理：達到 5 次錯誤後保留記錄標記為失效，用戶需重新發送新驗證碼
+  '''
+}
+
+Table operation_logs {
+  id string [pk, note: '操作紀錄唯一識別碼']
+  admin_user_id string [note: '操作者管理員 ID']
+  action string [not null, note: '操作行為名稱']
+  target_type string [note: '操作目標類型']
+  target_id string [note: '操作目標 ID']
+  details string [note: '操作詳細資訊（JSONB 格式）']
+  created_at string [default: 'now()', note: '操作時間']
+  
+  Note: '''
+    操作紀錄實體
+    用途：記錄後台管理員的操作行為，用於審計追蹤
+    關聯：N:1 admin_users
+    記錄內容：操作人、操作時間、操作類型、目標對象、詳細資訊
+  '''
+}
+
+// 實體關聯定義
+
+// doctor_treatments 的關聯
+Ref: doctor_treatments.doctor_id > doctors.id [delete: cascade]
+Ref: doctor_treatments.treatment_type_id > treatment_types.id [delete: cascade]
+
+// schedules 的關聯
+Ref: schedules.doctor_id > doctors.id [delete: cascade]
+
+// time_slots 的關聯
+Ref: time_slots.schedule_id > schedules.id [delete: cascade]
+
+// appointments 的關聯
+Ref: appointments.patient_id > patients.id [delete: restrict]
+Ref: appointments.doctor_id > doctors.id [delete: restrict]
+Ref: appointments.treatment_type_id > treatment_types.id [delete: restrict]
+Ref: appointments.time_slot_id > time_slots.id [delete: restrict]
+
+// blacklist 的關聯
+Ref: blacklist.patient_id - patients.id [delete: cascade]
+
+// operation_logs 的關聯
+Ref: operation_logs.admin_user_id > admin_users.id
+

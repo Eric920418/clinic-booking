@@ -1,0 +1,328 @@
+// 中醫診所 LINE 預約系統 - Prisma Schema
+// 對應規格：clinic-booking-spec.md 第 5 節
+// 版本: 1.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =============================================
+// 5.2.1 patients（病患）
+// 對應規格：spec/erm.dbml - Table patients
+// =============================================
+model Patient {
+  id            String   @id @default(uuid())
+  // LINE User ID，用於 LINE 平台身分識別
+  lineUserId    String?  @unique @map("line_user_id")
+  // 病患姓名，2-20 字元，中英文皆可
+  name          String
+  // 電話號碼，台灣手機格式 09xxxxxxxx
+  phone         String
+  // 身分證字號，台灣身分證格式驗證
+  nationalId    String   @unique @map("national_id")
+  // 出生年月日，不可為未來日期
+  birthDate     DateTime @map("birth_date") @db.Date
+  // 病患備註，內部註記（病患不可見）
+  notes         String?
+  // 未報到次數，0 <= no_show_count <= 3
+  noShowCount   Int      @default(0) @map("no_show_count")
+  // 黑名單狀態
+  isBlacklisted Boolean  @default(false) @map("is_blacklisted")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // 關聯
+  appointments Appointment[]
+  blacklist    Blacklist?
+
+  @@map("patients")
+}
+
+// =============================================
+// 5.2.2 doctors（醫師）
+// 對應規格：spec/erm.dbml - Table doctors
+// =============================================
+model Doctor {
+  id        String   @id @default(uuid())
+  // 醫師姓名
+  name      String
+  // 醫師狀態，啟用/停用
+  // 停用處理：當 is_active = false 時，自動取消所有未來預約並通知病患
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 關聯
+  schedules        Schedule[]
+  appointments     Appointment[]
+  doctorTreatments DoctorTreatment[]
+
+  @@map("doctors")
+}
+
+// =============================================
+// 5.2.3 treatment_types（診療類型）
+// 對應規格：spec/erm.dbml - Table treatment_types
+// 預設項目：初診(10分鐘)、內科(5分鐘)、針灸(5分鐘)
+// =============================================
+model TreatmentType {
+  id              String   @id @default(uuid())
+  // 診療項目名稱
+  name            String
+  // 扣除分鐘數，0 < duration_minutes <= 30
+  durationMinutes Int      @map("duration_minutes")
+  // 診療類型狀態
+  // 停用處理：當 is_active = false 時，自動取消所有使用此類型的未來預約並通知病患
+  isActive        Boolean  @default(true) @map("is_active")
+  // 排序順序
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // 關聯
+  appointments     Appointment[]
+  doctorTreatments DoctorTreatment[]
+
+  @@map("treatment_types")
+}
+
+// =============================================
+// 5.2.4 doctor_treatments（醫師診療項目）
+// 對應規格：spec/erm.dbml - Table doctor_treatments
+// 多對多中介表：記錄醫師可看診的診療項目
+// =============================================
+model DoctorTreatment {
+  id              String @id @default(uuid())
+  doctorId        String @map("doctor_id")
+  treatmentTypeId String @map("treatment_type_id")
+
+  // 關聯
+  doctor        Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  treatmentType TreatmentType @relation(fields: [treatmentTypeId], references: [id], onDelete: Cascade)
+
+  // 唯一性：同一醫師不可重複關聯相同診療項目
+  @@unique([doctorId, treatmentTypeId])
+  @@map("doctor_treatments")
+}
+
+// =============================================
+// 5.2.5 schedules（班表）
+// 對應規格：spec/erm.dbml - Table schedules
+// =============================================
+model Schedule {
+  id          String   @id @default(uuid())
+  doctorId    String   @map("doctor_id")
+  // 班表日期
+  date        DateTime @db.Date
+  // 是否可預約，從 false 改回 true 僅限未來日期
+  isAvailable Boolean  @default(true) @map("is_available")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // 關聯
+  doctor    Doctor     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  timeSlots TimeSlot[]
+
+  // 唯一性：同一醫師在同一日期只能有一筆班表
+  @@unique([doctorId, date])
+  @@index([date])
+  @@map("schedules")
+}
+
+// =============================================
+// 5.2.6 time_slots（時段）
+// 對應規格：spec/erm.dbml - Table time_slots
+// =============================================
+model TimeSlot {
+  id               String   @id @default(uuid())
+  scheduleId       String   @map("schedule_id")
+  // 時段開始時間
+  startTime        DateTime @map("start_time") @db.Time
+  // 時段結束時間
+  endTime          DateTime @map("end_time") @db.Time
+  // 時段總分鐘數，預設 30
+  totalMinutes     Int      @default(30) @map("total_minutes")
+  // 剩餘可預約分鐘數
+  // 跨屬性不變條件：0 <= remaining_minutes <= total_minutes
+  // 預約時：remaining_minutes -= treatment_type.duration_minutes
+  // 取消時：remaining_minutes += treatment_type.duration_minutes
+  // 當 remaining_minutes = 0 時不可手動調整
+  remainingMinutes Int      @default(30) @map("remaining_minutes")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // 關聯
+  schedule     Schedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([scheduleId])
+  @@map("time_slots")
+}
+
+// =============================================
+// 5.2.7 appointments（預約）
+// 對應規格：spec/erm.dbml - Table appointments
+// 狀態流轉：
+// - 正常流程：已預約 → 已報到 → 已完成
+// - 異常流程：已預約 → 未報到（可補救改為已報到）/ 已取消（終止）
+// - 終止狀態：已完成（不可變更）、已取消（不可變更）
+// =============================================
+enum AppointmentStatus {
+  booked     // 已預約
+  checked_in // 已報到
+  completed  // 已完成
+  no_show    // 未報到
+  cancelled  // 已取消
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  patientId       String            @map("patient_id")
+  doctorId        String            @map("doctor_id")
+  treatmentTypeId String            @map("treatment_type_id")
+  timeSlotId      String            @map("time_slot_id")
+  // 預約日期
+  appointmentDate DateTime          @map("appointment_date") @db.Date
+  // 預約狀態
+  status          AppointmentStatus @default(booked)
+  // 取消原因
+  cancelledReason String?           @map("cancelled_reason")
+  // 取消操作者 ID
+  cancelledBy     String?           @map("cancelled_by")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  // 關聯
+  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor        Doctor        @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  treatmentType TreatmentType @relation(fields: [treatmentTypeId], references: [id], onDelete: Restrict)
+  timeSlot      TimeSlot      @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
+
+  @@index([patientId])
+  @@index([appointmentDate])
+  @@index([status])
+  @@map("appointments")
+}
+
+// =============================================
+// 5.2.8 blacklist（黑名單）
+// 對應規格：spec/erm.dbml - Table blacklist
+// 觸發條件：未報到累計 >= 3 次自動加入
+// 效果：永久無法使用預約系統
+// 解除：僅限超級管理員手動解除
+// =============================================
+model Blacklist {
+  id        String   @id @default(uuid())
+  patientId String   @unique @map("patient_id")
+  // 加入黑名單原因
+  reason    String?
+  // 操作者 ID
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // 關聯
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("blacklist")
+}
+
+// =============================================
+// 5.2.9 admin_users（後台帳號）
+// 對應規格：spec/erm.dbml - Table admin_users
+// 安全機制：
+// - 密碼加密儲存（bcrypt）
+// - 登入失敗 5 次鎖定 15 分鐘
+// - Session 有效期 24 小時
+// =============================================
+enum AdminRole {
+  admin       // 管理員
+  super_admin // 超級管理員
+}
+
+model AdminUser {
+  id               String    @id @default(uuid())
+  // 管理員帳號（Email）
+  email            String    @unique
+  // 密碼雜湊值，使用 bcrypt 加密
+  passwordHash     String    @map("password_hash")
+  // 管理員姓名
+  name             String
+  // 管理員角色
+  role             AdminRole @default(admin)
+  // 帳號狀態
+  isActive         Boolean   @default(true) @map("is_active")
+  // 語言設定
+  language         String    @default("zh-TW")
+  // 時區設定
+  timezone         String    @default("Asia/Taipei")
+  // 登入失敗次數，登入成功時重置為 0
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  // 帳號鎖定時間
+  lockedUntil      DateTime? @map("locked_until")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // 關聯
+  operationLogs OperationLog[]
+
+  @@map("admin_users")
+}
+
+// =============================================
+// 5.2.10 verification_codes（驗證碼）
+// 對應規格：spec/erm.dbml - Table verification_codes
+// 驗證碼規則：
+// - 長度：6 位數字
+// - 有效期：5 分鐘
+// - 錯誤上限：5 次（超過需重新發送）
+// - 重新發送限制：60 秒內 1 次
+// =============================================
+model VerificationCode {
+  id         String    @id @default(uuid())
+  // LINE User ID
+  lineUserId String    @map("line_user_id")
+  // 驗證碼，6 位數字
+  code       String
+  // 驗證嘗試次數
+  attempts   Int       @default(0)
+  // 過期時間
+  expiresAt  DateTime  @map("expires_at")
+  // 使用時間
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([lineUserId])
+  @@map("verification_codes")
+}
+
+// =============================================
+// 5.2.11 operation_logs（操作紀錄）
+// 對應規格：spec/erm.dbml - Table operation_logs
+// =============================================
+model OperationLog {
+  id          String   @id @default(uuid())
+  adminUserId String?  @map("admin_user_id")
+  // 操作行為名稱
+  action      String
+  // 操作目標類型
+  targetType  String?  @map("target_type")
+  // 操作目標 ID
+  targetId    String?  @map("target_id")
+  // 操作詳細資訊（JSONB 格式）
+  details     Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // 關聯
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id])
+
+  @@index([adminUserId])
+  @@index([createdAt])
+  @@map("operation_logs")
+}
+
