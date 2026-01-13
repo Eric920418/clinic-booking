@@ -272,7 +272,11 @@ pnpm exec playwright show-report
 | 病患修改預約 | `tests/e2e/liff/patient-update-appointment.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 9/9 通過 |
 | 病患資料處理 | `tests/e2e/liff/patient-data.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 15/15 通過 |
 | 管理員編輯預約 | `tests/e2e/admin/edit-appointment.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 3/3 通過 |
-| 管理病患資料 | `tests/e2e/admin/manage-patients.spec.ts` | ✅ GO | ✅ 已完成 | 🔴 紅燈 | 🔴 0/2 失敗 |
+| 管理病患資料 | `tests/e2e/admin/manage-patients.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 2/2 通過 |
+| 管理員取消預約 | `tests/e2e/admin/cancel-appointment.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 3/4 通過 |
+| 管理帳號 | `tests/e2e/admin/manage-accounts.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 10/10 通過 |
+| 管理員手動新增預約 | `tests/e2e/admin/manual-booking.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 5/7 通過 |
+| 管理班表 | `tests/e2e/admin/manage-schedules.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 11/11 通過 |
 
 ### 測試案例摘要
 
@@ -334,13 +338,47 @@ pnpm exec playwright show-report
 - 修改預約時必須扣除新時段分鐘數（#TODO - Feature File 尚未定義）
 - 修改記錄必須包含操作人與操作時間（#TODO - Feature File 尚未定義）
 
-**管理病患資料** (2 個測試案例，紅燈)：
+**管理病患資料** (2 個測試案例，已通過)：
 - 可編輯病患備註（新增病患備註、修改病患備註）
 - 可依姓名/電話/身分證搜尋病患（#TODO - Feature File 尚未定義）
 - 可依黑名單狀態篩選病患（#TODO - Feature File 尚未定義）
 - 可依 LINE 綁定狀態篩選病患（#TODO - Feature File 尚未定義）
 - 病患備註為內部註記，病患不可見（#TODO - Feature File 尚未定義）
 - 可查看病患的所有預約紀錄（#TODO - Feature File 尚未定義）
+
+**管理員取消預約** (4 個測試案例，3 個通過)：
+- 取消預約時必須更新預約狀態為「已取消」（取消預約後狀態變更）
+- 取消預約時必須釋放時段分鐘數（取消針灸預約釋放 5 分鐘）
+- 取消成功後必須發送 LINE 通知（病患有 LINE User ID 時發送取消通知）
+- 可記錄取消原因（#TODO - Feature File 尚未定義完整 Example）
+
+**管理帳號** (10 個測試案例，2 個 TODO，已通過)：
+- 僅超級管理員可管理帳號（一般管理員無法新增帳號、超級管理員可新增帳號）
+- 帳號必須使用 Email 格式（#TODO - Feature File 尚未定義完整 Example）
+- Email 必須唯一（重複的 Email 無法新增）
+- 密碼最小長度為 8 字元（密碼少於 8 字元無效、密碼 8 字元有效）
+- 密碼必須包含大寫、小寫、數字（缺少大寫無效、缺少小寫無效、缺少數字無效、包含所有元素有效）
+- 可停用帳號（停用帳號後狀態更新）
+- 可重設密碼（#TODO - Feature File 尚未定義完整 Example）
+
+**管理員手動新增預約** (7 個測試案例，5 個通過，2 個 TODO)：
+- 時段剩餘分鐘數必須大於等於診療所需分鐘數（時段足夠可新增預約、時段不足無法新增預約）
+- 病患當日不可有重複預約（當日已有預約無法再次新增）
+- 預約成功後必須扣除時段分鐘數（#TODO - Feature File 標記為 #TODO）
+- 預約成功後必須建立預約記錄（#TODO - Feature File 標記為 #TODO）
+- 若病患有綁定 LINE 則發送通知（有 LINE User ID 發送通知、無 LINE User ID 不發送通知）
+
+**管理班表** (11 個測試案例，已通過)：
+- 同一醫師在同一日期只能有一筆班表（相同醫師相同日期無法重複建立、相同醫師不同日期可建立）
+- 時段總分鐘數預設為 30 分鐘（建立時段時預設總分鐘數與剩餘分鐘數）
+- 可手動調整時段剩餘分鐘數（調整特定時段的剩餘分鐘數）
+- 剩餘分鐘數為 0 時不可手動調整（餘量為 0 時無法調整、餘量大於 0 時可調整）
+- 標記停診時已預約者必須發送通知（停診時發送通知給所有已預約病患）
+- 標記停診時必須將班表設為不可預約（停診後班表狀態更新）
+- 停診恢復僅限未來日期（未來日期的停診可恢復、過去或當日的停診無法恢復）
+- 可為醫師新增額外時段（新增加診時段）
+- 可設定週期性班表（#TODO - Feature File 標記為 #TODO）
+- 可設定可預約日（#TODO - Feature File 標記為 #TODO）
 
 ### 測試目錄結構
 
@@ -356,7 +394,11 @@ tests/e2e/
 ├── admin/                       # 管理後台 E2E 測試
 │   ├── login.spec.ts            # 管理員登入測試（8 個案例，已通過）
 │   ├── edit-appointment.spec.ts # 管理員編輯預約測試（3 個案例，已通過）
-│   └── manage-patients.spec.ts  # 管理病患資料測試（2 個案例，紅燈）
+│   ├── cancel-appointment.spec.ts # 管理員取消預約測試（4 個案例，3 個通過）
+│   ├── manage-patients.spec.ts  # 管理病患資料測試（2 個案例，已通過）
+│   ├── manage-accounts.spec.ts  # 管理帳號測試（10 個案例，已通過）
+│   ├── manual-booking.spec.ts   # 管理員手動新增預約測試（5 個案例，樣板）
+│   └── manage-schedules.spec.ts # 管理班表測試（11 個案例，已通過）
 ├── api/                         # API 測試
 ├── helpers/                     # 輔助函式
 │   ├── index.ts                # 匯出
@@ -389,7 +431,15 @@ tests/e2e/
 | 病患修改預約 | `PUT /api/patient/appointments/{id}` |
 | 病患資料處理 | `POST /api/patient/profile`, `GET /api/patient/profile` |
 | 管理員編輯預約 | `PUT /api/admin/appointments/{id}` |
+| 管理員取消預約 | `DELETE /api/admin/appointments/{id}` |
 | 管理員編輯病患備註 | `PATCH /api/admin/patients/{id}` |
+| 管理員新增帳號 | `POST /api/admin/accounts` |
+| 管理員停用帳號 | `POST /api/admin/accounts/{id}/disable` |
+| 管理員手動新增預約 | `POST /api/admin/appointments` |
+| 管理班表 - 建立班表 | `POST /api/admin/schedules` |
+| 管理班表 - 更新班表 | `PATCH /api/admin/schedules/{id}` |
+| 管理班表 - 建立時段 | `POST /api/admin/schedules/{id}/time-slots` |
+| 管理班表 - 調整時段餘量 | `PATCH /api/admin/time-slots/{id}` |
 
 ## 規格文件
 

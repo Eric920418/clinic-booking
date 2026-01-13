@@ -25,9 +25,10 @@ export async function createPatient(data: PatientData = {}) {
       name: data.name ?? '測試病患',
       phone: data.phone ?? `09${String(timestamp).slice(-8)}`,
       nationalId: data.nationalId ?? `A${String(timestamp).slice(-9)}`,
-      lineUserId: data.lineUserId ?? `U${timestamp}`,
+      // 明確處理 null：只有 undefined 時才使用默認值
+      lineUserId: data.lineUserId === undefined ? `U${timestamp}` : data.lineUserId,
       birthDate: data.birthDate ?? new Date('1990-01-01'),
-      notes: data.notes ?? null,
+      notes: data.notes === undefined ? null : data.notes,
       noShowCount: data.noShowCount ?? 0,
       isBlacklisted: data.isBlacklisted ?? false,
     },

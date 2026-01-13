@@ -207,29 +207,26 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       }, { status: 400 });
     }
 
-    // 使用交易處理
+    // 使用交易處理（Serializable 隔離級別確保並發安全）
     const appointment = await prisma.$transaction(async (tx) => {
-      // 鎖定時段
-      const timeSlots = await tx.$queryRaw<Array<{
-        id: string;
-        remaining_minutes: number;
-      }>>`
-        SELECT id, remaining_minutes 
-        FROM time_slots 
-        WHERE id = ${timeSlotId}::uuid 
-        FOR UPDATE
-      `;
+      // 取得時段資訊
+      const timeSlot = await tx.timeSlot.findUnique({
+        where: { id: timeSlotId },
+      });
 
-      if (timeSlots.length === 0 || timeSlots[0].remaining_minutes < treatmentType.durationMinutes) {
+      if (!timeSlot || timeSlot.remainingMinutes < treatmentType.durationMinutes) {
         throw new Error('E003');
       }
 
-      // 檢查當日是否已有預約
+      // 檢查當日是否已有預約（使用範圍查詢確保時區一致性）
       const existingAppointment = await tx.appointment.findFirst({
         where: {
           patientId: patient.id,
-          appointmentDate: appointmentDateObj,
-          status: { notIn: ['cancelled', 'no_show', 'completed'] },
+          appointmentDate: {
+            gte: startOfDay(appointmentDateObj),
+            lte: endOfDay(appointmentDateObj),
+          },
+          status: { in: ['booked', 'checked_in'] },
         },
       });
 

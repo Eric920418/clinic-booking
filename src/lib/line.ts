@@ -18,8 +18,9 @@ export async function sendLineMessage(
   userId: string,
   messages: LineMessage[]
 ): Promise<boolean> {
-  // 開發環境且未設定 Token 時，僅記錄訊息
-  if (!LINE_CHANNEL_ACCESS_TOKEN) {
+  // 非生產環境或未設定 Token 時，僅記錄訊息（Mock 模式）
+  // 這樣在開發和測試環境都會 mock，不會實際呼叫 LINE API
+  if (process.env.NODE_ENV !== 'production' || !LINE_CHANNEL_ACCESS_TOKEN) {
     console.log('[LINE Mock] Sending message to:', userId, messages);
     return true;
   }

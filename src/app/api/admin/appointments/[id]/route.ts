@@ -12,6 +12,7 @@ import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { ERROR_CODES, type ApiResponse } from '@/types';
 import { Prisma } from '@prisma/client';
+import { sendAppointmentCancellation } from '@/lib/line';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -222,22 +223,118 @@ export async function PUT(
 // =============================================
 // DELETE: 取消預約
 // 對應規格：spec/features/管理員取消預約.feature
+// - Rule: 取消預約時必須更新預約狀態為「已取消」
+// - Rule: 取消預約時必須釋放時段分鐘數
+// - Rule: 取消成功後必須發送 LINE 通知
 // =============================================
 export async function DELETE(
   _request: NextRequest,
-  { params: _params }: RouteParams
+  { params }: RouteParams
 ): Promise<NextResponse<ApiResponse>> {
-  const user = await getCurrentUser();
-  if (!user) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '未登入' },
+      }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    // 使用交易處理，確保資料一致性
+    const result = await prisma.$transaction(async (tx) => {
+      // 查詢預約（包含病患、時段和診療類型）
+      const appointment = await tx.appointment.findUnique({
+        where: { id },
+        include: {
+          patient: true,
+          timeSlot: true,
+          treatmentType: true,
+        },
+      });
+
+      if (!appointment) {
+        throw new Error('E007'); // 無此預約
+      }
+
+      // Rule 1: 取消預約時必須更新預約狀態為「已取消」
+      const updatedAppointment = await tx.appointment.update({
+        where: { id },
+        data: {
+          status: 'cancelled',
+        },
+      });
+
+      // Rule 2: 取消預約時必須釋放時段分鐘數
+      await tx.timeSlot.update({
+        where: { id: appointment.timeSlotId },
+        data: {
+          remainingMinutes: {
+            increment: appointment.treatmentType.durationMinutes,
+          },
+        },
+      });
+
+      return {
+        appointment: updatedAppointment,
+        lineUserId: appointment.patient.lineUserId,
+        previousStatus: appointment.status,
+      };
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    });
+
+    // Rule 3: 取消成功後發送 LINE 通知（在 transaction 外執行）
+    let lineNotificationSent = false;
+    const lineUserId = result.lineUserId;
+
+    if (lineUserId) {
+      // 發送 LINE 通知（在開發環境會自動 mock）
+      lineNotificationSent = await sendAppointmentCancellation(lineUserId);
+    }
+
+    // 記錄操作日誌（在 transaction 外執行）
+    await prisma.operationLog.create({
+      data: {
+        adminUserId: user.userId,
+        action: 'CANCEL_APPOINTMENT',
+        targetType: 'appointment',
+        targetId: id,
+        details: {
+          previousStatus: result.previousStatus,
+          newStatus: 'cancelled',
+          lineUserId: lineUserId || null,
+          lineNotificationSent,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: result.appointment.id,
+        status: result.appointment.status,
+        lineNotificationSent,
+        message: '預約已取消',
+      },
+    });
+
+  } catch (error) {
+    console.error('[DELETE /api/admin/appointments/:id]', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'E001';
+
+    if (errorMessage === 'E007') {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E007', message: ERROR_CODES.E007 },
+      }, { status: 404 });
+    }
+
     return NextResponse.json({
       success: false,
-      error: { code: 'E001', message: '未登入' },
-    }, { status: 401 });
+      error: { code: 'E001', message: '取消預約失敗' },
+    }, { status: 500 });
   }
-
-  // TODO: 實作取消預約
-  return NextResponse.json({
-    success: false,
-    error: { code: 'E001', message: 'Not implemented' },
-  }, { status: 501 });
 }

@@ -7,7 +7,7 @@
 import { test, expect } from '@playwright/test'
 import { cleanupDatabase } from '../helpers/cleanup'
 import { createPatient, createAdminUser } from '../factories'
-import { loginAsAdmin, withAuth, withAuthAndData } from '../helpers/auth'
+import { loginAsAdmin, withAuthAndData } from '../helpers/auth'
 import { prisma } from '../helpers/db'
 
 // 測試上下文，用於在步驟間傳遞資料
@@ -19,17 +19,13 @@ test.beforeEach(async ({ request }) => {
   await cleanupDatabase()
   context = {}
 
-  // 準備管理員帳號（用於 API 認證）
-  // [事件風暴部位: Aggregate - AdminUser]
+  // Given 管理員已登入
   const admin = await createAdminUser({
     email: 'admin@example.com',
     password: 'Password123',
   })
   context['adminId'] = admin.id
-  context['adminEmail'] = admin.email
-  context['adminPassword'] = admin.plainPassword
 
-  // 登入管理員取得 token
   const token = await loginAsAdmin(request, admin.email, admin.plainPassword)
   context['adminToken'] = token
 })
@@ -69,14 +65,12 @@ test.describe('可編輯病患備註', () => {
    */
 
   test('新增病患備註', async ({ request }) => {
-    // Given 病患 ID 為 "patient123"
-    // [使用 Aggregate-Given-Handler.md]
-    // And 病患備註為 null
+    // Given 病患備註為 null
     const patient = await createPatient({
       name: '王小明',
       phone: '0912345678',
       nationalId: 'A123456789',
-      notes: null, // 初始備註為 null
+      notes: null,
     })
     context['patientId'] = patient.id
 
@@ -84,24 +78,19 @@ test.describe('可編輯病患備註', () => {
     const inputNotes = '對止痛藥過敏'
 
     // When 管理員編輯病患備註
-    // [使用 Command-Handler.md]
-    // API: PATCH /api/admin/patients/{patientId}
     const response = await request.patch(
       `/api/admin/patients/${context['patientId']}`,
       withAuthAndData(context['adminToken'], {
         notes: inputNotes,
       })
     )
-    context['lastResponse'] = response
 
     // Then 操作成功
-    // [使用 Success-Failure-Handler.md]
     expect(response.ok()).toBeTruthy()
     const body = await response.json()
     expect(body.success).toBe(true)
 
-    // And 病患備註為 "對止痛藥過敏"
-    // [使用 Aggregate-Then-Handler.md]
+    // And 病患備註已更新
     const updatedPatient = await prisma.patient.findUnique({
       where: { id: context['patientId'] },
     })
@@ -110,14 +99,12 @@ test.describe('可編輯病患備註', () => {
   })
 
   test('修改病患備註', async ({ request }) => {
-    // Given 病患 ID 為 "patient123"
-    // [使用 Aggregate-Given-Handler.md]
-    // And 病患備註為 "對止痛藥過敏"
+    // Given 病患備註為 "對止痛藥過敏"
     const patient = await createPatient({
       name: '王小明',
       phone: '0912345679',
       nationalId: 'A123456788',
-      notes: '對止痛藥過敏', // 初始備註
+      notes: '對止痛藥過敏',
     })
     context['patientId'] = patient.id
 
@@ -125,24 +112,19 @@ test.describe('可編輯病患備註', () => {
     const inputNotes = '對止痛藥過敏、行動不便需協助'
 
     // When 管理員編輯病患備註
-    // [使用 Command-Handler.md]
-    // API: PATCH /api/admin/patients/{patientId}
     const response = await request.patch(
       `/api/admin/patients/${context['patientId']}`,
       withAuthAndData(context['adminToken'], {
         notes: inputNotes,
       })
     )
-    context['lastResponse'] = response
 
     // Then 操作成功
-    // [使用 Success-Failure-Handler.md]
     expect(response.ok()).toBeTruthy()
     const body = await response.json()
     expect(body.success).toBe(true)
 
-    // And 病患備註為 "對止痛藥過敏、行動不便需協助"
-    // [使用 Aggregate-Then-Handler.md]
+    // And 病患備註已更新
     const updatedPatient = await prisma.patient.findUnique({
       where: { id: context['patientId'] },
     })
