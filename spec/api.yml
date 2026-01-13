@@ -1,0 +1,2671 @@
+openapi: 3.0.3
+info:
+  title: 診所預約系統 API
+  description: |
+    診所預約系統的 RESTful API 規格文件。
+
+    每個 API 的 summary 欄位對應 Feature File 中的 step statement。
+  version: 1.0.0
+  contact:
+    name: Clinic Booking System
+
+servers:
+  - url: /api
+    description: API Base URL
+
+tags:
+  - name: LINE入口驗證
+    description: LINE LIFF 身分驗證相關 API (LINE入口驗證.feature)
+  - name: 真人驗證
+    description: 驗證碼相關 API (真人驗證.feature)
+  - name: 病患資料處理
+    description: 病患個人資料相關 API (病患資料處理.feature)
+  - name: 病患預約
+    description: 病患預約相關 API (病患建立預約.feature, 病患查看預約.feature, 病患修改預約.feature, 病患取消預約.feature)
+  - name: 管理員登入
+    description: 管理員認證相關 API (管理員登入.feature)
+  - name: 管理帳號
+    description: 管理員帳號管理 API (管理帳號.feature)
+  - name: 管理員預約
+    description: 管理員預約管理 API (管理員手動新增預約.feature, 管理員編輯預約.feature, 管理員取消預約.feature, 管理員更新預約狀態.feature)
+  - name: 管理病患資料
+    description: 病患資料管理 API (管理病患資料.feature)
+  - name: 黑名單管理
+    description: 黑名單相關 API (黑名單管理.feature)
+  - name: 管理醫師資料
+    description: 醫師資料管理 API (管理醫師資料.feature)
+  - name: 管理診療類型
+    description: 診療類型管理 API (管理診療類型.feature)
+  - name: 管理班表
+    description: 班表與時段管理 API (管理班表.feature)
+  - name: 即時更新
+    description: 即時更新相關 API (即時更新時段餘量.feature)
+  - name: 系統排程
+    description: 系統自動任務 API (預約狀態自動更新.feature, 黑名單管理.feature)
+
+paths:
+  # ============================================
+  # LINE入口驗證.feature
+  # ============================================
+  /line/entry:
+    post:
+      tags:
+        - LINE入口驗證
+      summary: 用戶透過 LINE LIFF 進入系統
+      description: |
+        **Feature:** LINE入口驗證.feature
+
+        **Rules:**
+        - 必須檢查用戶是否在黑名單中
+        - 黑名單用戶無法進入系統並顯示停權原因與申訴管道
+        - 非黑名單用戶可進入驗證流程
+      operationId: lineEntry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineEntryRequest'
+      responses:
+        '200':
+          description: 進入真人驗證流程
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineEntryResponse'
+        '403':
+          description: 操作失敗 - 黑名單用戶
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlacklistErrorResponse'
+
+  # ============================================
+  # 真人驗證.feature
+  # ============================================
+  /verification/send:
+    post:
+      tags:
+        - 真人驗證
+      summary: 病患請求發送驗證碼
+      description: |
+        **Feature:** 真人驗證.feature
+
+        **Rules:**
+        - 系統必須產生 6 位數驗證碼
+        - 驗證碼透過 LINE Messaging API 發送至該用戶
+        - 重新發送驗證碼限制為 60 秒內 1 次
+      operationId: sendVerificationCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendVerificationRequest'
+      responses:
+        '200':
+          description: 系統產生 6 位數驗證碼，驗證碼透過 LINE Messaging API 發送至該用戶
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendVerificationResponse'
+        '429':
+          description: 操作失敗 - 距離上次發送未滿 60 秒無法重新發送
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /verification/verify:
+    post:
+      tags:
+        - 真人驗證
+      summary: 病患輸入驗證碼 {code}
+      description: |
+        **Feature:** 真人驗證.feature
+
+        **Rules:**
+        - 驗證碼有效期為 5 分鐘
+        - 驗證錯誤上限為 5 次
+        - 驗證錯誤達 5 次後驗證碼記錄標記為失效
+      operationId: verifyCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyCodeRequest'
+      responses:
+        '200':
+          description: 驗證成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyCodeResponse'
+        '400':
+          description: 操作失敗 - 驗證碼錯誤或已失效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 病患資料處理.feature
+  # ============================================
+  /patient/profile:
+    get:
+      tags:
+        - 病患資料處理
+      summary: 病患進入個人資料頁面
+      description: |
+        **Feature:** 病患資料處理.feature
+
+        **Rules:**
+        - 以 LINE User ID + 身分證字號作為唯一識別
+        - 回診自動帶入歷史資料
+      operationId: getPatientProfile
+      parameters:
+        - name: line_user_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: national_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 姓名欄位預填 {name}，電話欄位預填 {phone}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientProfileResponse'
+        '404':
+          description: 無歷史資料
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - 病患資料處理
+      summary: 病患提交個人資料
+      description: |
+        **Feature:** 病患資料處理.feature
+
+        **Rules:**
+        - 姓名必須為 2-20 字元
+        - 電話必須為台灣手機格式
+        - 身分證字號必須符合台灣身分證格式
+        - 出生年月日不可為未來日期
+        - 以 LINE User ID + 身分證字號作為唯一識別
+        - 首次預約建立新病患資料
+      operationId: submitPatientProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientProfileRequest'
+      responses:
+        '200':
+          description: 個人資料被儲存
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientProfileResponse'
+        '201':
+          description: 建立新病患記錄
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientProfileResponse'
+        '400':
+          description: 操作失敗 - 資料驗證錯誤
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  # ============================================
+  # 病患查看預約.feature
+  # ============================================
+  /patient/appointments:
+    get:
+      tags:
+        - 病患預約
+      summary: 病患查看預約列表
+      description: |
+        **Feature:** 病患查看預約.feature
+
+        **Rules:**
+        - 系統必須顯示預約日期與時段
+        - 系統必須顯示醫師姓名
+        - 系統必須顯示診療類型
+        - 系統必須顯示預約狀態
+        - 系統必須顯示預約建立時間
+      operationId: getPatientAppointments
+      parameters:
+        - name: line_user_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 顯示預約狀態如下
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AppointmentResponse'
+
+  # ============================================
+  # 病患建立預約.feature
+  # ============================================
+    post:
+      tags:
+        - 病患預約
+      summary: 病患建立預約
+      description: |
+        **Feature:** 病患建立預約.feature
+
+        **Rules:**
+        - 病患不可在黑名單中
+        - 時段剩餘分鐘數必須大於等於診療所需分鐘數
+        - 病患當日不可有重複預約
+        - 預約成功後必須扣除時段分鐘數
+        - 預約成功後必須建立預約記錄
+        - 預約成功後必須發送 LINE 通知
+        - 不可選擇過去日期
+        - 不可選擇超過 30 天後的日期
+        - 每次預約僅能選擇一個診療項目
+
+        **併發控制 (併發預約控制.feature):**
+        - 使用 Row-Level Lock 鎖定時段記錄
+        - 先取得鎖定者預約成功
+        - 後取得鎖定者檢查時段餘量不足則失敗
+        - 交易失敗時必須回滾所有變更
+        - 時段餘量不足時返回錯誤訊息與替代選項
+      operationId: createPatientAppointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppointmentRequest'
+      responses:
+        '201':
+          description: 預約記錄被建立，LINE 訊息發送至 {lineUserId}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '400':
+          description: 操作失敗 - 時段剩餘分鐘數不足或其他驗證錯誤
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentErrorResponse'
+        '403':
+          description: 操作失敗 - 黑名單病患無法建立預約
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作失敗 - 病患當日已有預約
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 病患修改預約.feature
+  # ============================================
+  /patient/appointments/{appointmentId}:
+    get:
+      tags:
+        - 病患預約
+      summary: 病患查看預約詳情
+      description: |
+        **Feature:** 病患查看預約.feature
+
+        取得單一預約的詳細資訊。
+      operationId: getPatientAppointmentById
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 預約詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '404':
+          description: 預約不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - 病患預約
+      summary: 病患修改預約
+      description: |
+        **Feature:** 病患修改預約.feature
+
+        **Rules:**
+        - 僅可修改狀態為「已預約」的預約
+        - 不可修改時段開始前 3 小時內的預約
+        - 修改預約時必須立即釋放原時段分鐘數
+        - 修改預約時必須檢查新時段餘量
+        - 修改預約時必須扣除新時段分鐘數
+        - 修改成功後必須發送 LINE 通知
+      operationId: updatePatientAppointment
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAppointmentRequest'
+      responses:
+        '200':
+          description: 預約記錄被更新，時段 {slotId} 剩餘分鐘數為 {remainingMinutes}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '400':
+          description: 操作失敗 - 新時段餘量不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 操作失敗 - 已取消/已完成狀態無法修改 或 時段開始前 3 小時內無法修改
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 病患取消預約.feature
+  # ============================================
+    delete:
+      tags:
+        - 病患預約
+      summary: 病患取消預約
+      description: |
+        **Feature:** 病患取消預約.feature
+
+        **Rules:**
+        - 取消預約時必須更新預約狀態為「已取消」
+        - 取消預約時必須釋放時段分鐘數
+        - 取消成功後必須發送 LINE 通知
+      operationId: cancelPatientAppointment
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 預約狀態為 "cancelled"，時段 {slotId} 剩餘分鐘數為 {remainingMinutes}，LINE 訊息發送至 {lineUserId}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '404':
+          description: 預約不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 管理員登入.feature
+  # ============================================
+  /admin/login:
+    post:
+      tags:
+        - 管理員登入
+      summary: 管理員登入
+      description: |
+        **Feature:** 管理員登入.feature
+
+        **Rules:**
+        - 帳號與密碼必須正確
+        - 帳號必須為啟用狀態
+        - 登入失敗累計 5 次後鎖定 15 分鐘
+        - 登入成功時失敗次數重置為 0
+        - Session 有效期為 24 小時
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminLoginRequest'
+      responses:
+        '200':
+          description: 登入成功，Session 建立，登入失敗次數為 0
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminLoginResponse'
+        '401':
+          description: 操作失敗 - 密碼錯誤
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 操作失敗 - 帳號停用或鎖定中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountLockErrorResponse'
+
+  /admin/logout:
+    post:
+      tags:
+        - 管理員登入
+      summary: 管理員登出
+      operationId: adminLogout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ============================================
+  # 管理帳號.feature
+  # ============================================
+  /admin/accounts:
+    get:
+      tags:
+        - 管理帳號
+      summary: 取得所有管理員帳號列表
+      description: |
+        **Feature:** 管理帳號.feature
+
+        僅超級管理員可查看。
+      operationId: getAdminAccounts
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 帳號列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminAccountResponse'
+        '403':
+          description: 操作失敗 - 一般管理員無權限
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - 管理帳號
+      summary: 超級管理員新增帳號
+      description: |
+        **Feature:** 管理帳號.feature
+
+        **Rules:**
+        - 僅超級管理員可管理帳號
+        - 帳號必須使用 Email 格式
+        - Email 必須唯一
+        - 密碼最小長度為 8 字元
+        - 密碼必須包含大寫、小寫、數字
+      operationId: createAdminAccount
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAdminAccountRequest'
+      responses:
+        '201':
+          description: 帳號記錄被建立
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAccountResponse'
+        '400':
+          description: 操作失敗 - 密碼不符合規則或 Email 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '403':
+          description: 操作失敗 - 一般管理員無法新增帳號
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作失敗 - 重複的 Email 無法新增
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/accounts/{accountId}:
+    put:
+      tags:
+        - 管理帳號
+      summary: 超級管理員編輯帳號
+      description: |
+        **Feature:** 管理帳號.feature
+
+        編輯管理員帳號資訊。
+      operationId: updateAdminAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAdminAccountRequest'
+      responses:
+        '200':
+          description: 帳號記錄被更新
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAccountResponse'
+        '403':
+          description: 操作失敗 - 無權限
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/accounts/{accountId}/disable:
+    post:
+      tags:
+        - 管理帳號
+      summary: 超級管理員停用帳號
+      description: |
+        **Feature:** 管理帳號.feature
+
+        **Rules:**
+        - 可停用帳號
+        - 停用帳號後狀態更新
+      operationId: disableAdminAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 帳號狀態為停用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAccountResponse'
+        '403':
+          description: 操作失敗 - 無權限
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/accounts/{accountId}/reset-password:
+    post:
+      tags:
+        - 管理帳號
+      summary: 超級管理員重設密碼
+      description: |
+        **Feature:** 管理帳號.feature
+
+        **Rules:**
+        - 可重設密碼
+      operationId: resetAdminPassword
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: 密碼重設成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: 操作失敗 - 密碼不符合規則
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '403':
+          description: 操作失敗 - 無權限
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 管理員手動新增預約.feature
+  # ============================================
+  /admin/appointments:
+    get:
+      tags:
+        - 管理員預約
+      summary: 取得預約列表
+      description: 管理員查看所有預約。
+      operationId: getAdminAppointments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: doctor_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [booked, checked_in, completed, no_show, cancelled]
+      responses:
+        '200':
+          description: 預約列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminAppointmentResponse'
+
+    post:
+      tags:
+        - 管理員預約
+      summary: 管理員新增預約
+      description: |
+        **Feature:** 管理員手動新增預約.feature
+
+        **Rules:**
+        - 時段剩餘分鐘數必須大於等於診療所需分鐘數
+        - 病患當日不可有重複預約
+        - 預約成功後必須扣除時段分鐘數
+        - 預約成功後必須建立預約記錄
+        - 若病患有綁定 LINE 則發送通知
+      operationId: createAdminAppointment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateAppointmentRequest'
+      responses:
+        '201':
+          description: 預約記錄被建立，時段剩餘分鐘數為 {remainingMinutes}，LINE 訊息發送至 {lineUserId}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAppointmentResponse'
+        '400':
+          description: 操作失敗 - 時段剩餘分鐘數不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 操作失敗 - 病患當日已有預約
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 管理員編輯預約.feature
+  # ============================================
+  /admin/appointments/{appointmentId}:
+    get:
+      tags:
+        - 管理員預約
+      summary: 取得預約詳情
+      operationId: getAdminAppointmentById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 預約詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAppointmentResponse'
+
+    put:
+      tags:
+        - 管理員預約
+      summary: 管理員編輯預約
+      description: |
+        **Feature:** 管理員編輯預約.feature
+
+        **Rules:**
+        - 修改預約時必須立即釋放原時段分鐘數
+        - 修改預約時必須檢查新時段餘量
+        - 修改預約時必須扣除新時段分鐘數
+        - 修改記錄必須包含操作人與操作時間
+      operationId: updateAdminAppointment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateAppointmentRequest'
+      responses:
+        '200':
+          description: 預約記錄被更新，時段 {originalSlotId} 剩餘分鐘數為 {originalRemainingMinutes}，時段 {newSlotId} 剩餘分鐘數為 {newRemainingMinutes}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAppointmentResponse'
+        '400':
+          description: 操作失敗 - 新時段餘量不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 管理員取消預約.feature
+  # ============================================
+    delete:
+      tags:
+        - 管理員預約
+      summary: 管理員取消預約
+      description: |
+        **Feature:** 管理員取消預約.feature
+
+        **Rules:**
+        - 取消預約時必須更新預約狀態為「已取消」
+        - 取消預約時必須釋放時段分鐘數
+        - 取消成功後必須發送 LINE 通知
+        - 可記錄取消原因
+      operationId: cancelAdminAppointment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAppointmentRequest'
+      responses:
+        '200':
+          description: 預約狀態為 "cancelled"，時段 {slotId} 剩餘分鐘數為 {remainingMinutes}，LINE 訊息發送至 {lineUserId}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAppointmentResponse'
+
+  # ============================================
+  # 管理員更新預約狀態.feature
+  # ============================================
+  /admin/appointments/{appointmentId}/status:
+    patch:
+      tags:
+        - 管理員預約
+      summary: 管理員更新預約狀態為 {status}
+      description: |
+        **Feature:** 管理員更新預約狀態.feature
+
+        **Rules:**
+        - 已預約狀態可更新為已報到
+        - 已報到狀態可更新為已完成
+        - 已預約狀態不可直接更新為已完成
+        - 已完成狀態不可變更
+        - 已取消狀態不可變更
+        - 未報到狀態可改為已報到（補報到）
+        - 未報到無法改為已預約
+        - 未報到無法改為已完成
+      operationId: updateAppointmentStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatusRequest'
+      responses:
+        '200':
+          description: 預約狀態為 {status}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAppointmentResponse'
+        '400':
+          description: 操作失敗 - 狀態轉換不允許
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 管理病患資料.feature
+  # ============================================
+  /admin/patients:
+    get:
+      tags:
+        - 管理病患資料
+      summary: 管理員搜尋/篩選病患
+      description: |
+        **Feature:** 管理病患資料.feature
+
+        **Rules:**
+        - 可依姓名/電話/身分證搜尋病患
+        - 可依黑名單狀態篩選病患
+        - 可依 LINE 綁定狀態篩選病患
+      operationId: searchPatients
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: keyword
+          in: query
+          description: 搜尋關鍵字（姓名/電話/身分證）
+          schema:
+            type: string
+        - name: is_blacklisted
+          in: query
+          description: 黑名單狀態篩選
+          schema:
+            type: boolean
+        - name: has_line
+          in: query
+          description: LINE 綁定狀態篩選
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: 病患列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PatientResponse'
+
+  /admin/patients/{patientId}:
+    get:
+      tags:
+        - 管理病患資料
+      summary: 取得病患詳情
+      operationId: getPatientById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 病患詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+
+    patch:
+      tags:
+        - 管理病患資料
+      summary: 管理員編輯病患備註
+      description: |
+        **Feature:** 管理病患資料.feature
+
+        **Rules:**
+        - 可編輯病患備註
+        - 病患備註為內部註記，病患不可見
+      operationId: updatePatientNote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePatientNoteRequest'
+      responses:
+        '200':
+          description: 病患備註為 {note}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+
+  /admin/patients/{patientId}/appointments:
+    get:
+      tags:
+        - 管理病患資料
+      summary: 查看病患的所有預約紀錄
+      description: |
+        **Feature:** 管理病患資料.feature
+
+        **Rules:**
+        - 可查看病患的所有預約紀錄
+      operationId: getPatientAppointmentsHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 病患預約紀錄
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminAppointmentResponse'
+
+  # ============================================
+  # 黑名單管理.feature
+  # ============================================
+  /admin/blacklist:
+    get:
+      tags:
+        - 黑名單管理
+      summary: 取得黑名單列表
+      operationId: getBlacklist
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 黑名單列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BlacklistResponse'
+
+    post:
+      tags:
+        - 黑名單管理
+      summary: 管理員加入黑名單
+      description: |
+        **Feature:** 黑名單管理.feature
+
+        **Rules:**
+        - 超級管理員可手動加入黑名單
+        - 黑名單操作必須記錄操作人、時間與原因
+      operationId: addToBlacklist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddBlacklistRequest'
+      responses:
+        '201':
+          description: 病患狀態 is_blacklisted 為 true，黑名單記錄被建立
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlacklistResponse'
+        '403':
+          description: 操作失敗 - 無權限
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/blacklist/{patientId}:
+    delete:
+      tags:
+        - 黑名單管理
+      summary: 管理員移除黑名單
+      description: |
+        **Feature:** 黑名單管理.feature
+
+        **Rules:**
+        - 超級管理員可手動移除黑名單
+        - 一般管理員無法移除黑名單
+      operationId: removeFromBlacklist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 病患狀態 is_blacklisted 為 false，黑名單記錄被刪除
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: 操作失敗 - 一般管理員無法移除黑名單
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 管理醫師資料.feature
+  # ============================================
+  /admin/doctors:
+    get:
+      tags:
+        - 管理醫師資料
+      summary: 取得醫師列表
+      operationId: getDoctors
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 醫師列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DoctorResponse'
+
+    post:
+      tags:
+        - 管理醫師資料
+      summary: 管理員新增醫師
+      description: |
+        **Feature:** 管理醫師資料.feature
+
+        **Rules:**
+        - 可新增醫師
+      operationId: createDoctor
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDoctorRequest'
+      responses:
+        '201':
+          description: 醫師記錄被建立
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorResponse'
+
+  /admin/doctors/{doctorId}:
+    get:
+      tags:
+        - 管理醫師資料
+      summary: 取得醫師詳情
+      operationId: getDoctorById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: doctorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 醫師詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorResponse'
+
+    put:
+      tags:
+        - 管理醫師資料
+      summary: 管理員編輯醫師姓名
+      description: |
+        **Feature:** 管理醫師資料.feature
+
+        **Rules:**
+        - 可編輯醫師姓名
+      operationId: updateDoctor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: doctorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDoctorRequest'
+      responses:
+        '200':
+          description: 醫師記錄被更新
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorResponse'
+
+  /admin/doctors/{doctorId}/disable:
+    post:
+      tags:
+        - 管理醫師資料
+      summary: 管理員停用醫師
+      description: |
+        **Feature:** 管理醫師資料.feature
+
+        **Rules:**
+        - 可停用醫師
+        - 停用醫師時自動取消所有未來預約並通知病患
+        - 停用醫師時已完成的預約不受影響
+      operationId: disableDoctor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: doctorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 醫師狀態為停用，預約 {appointmentId} 狀態為 "cancelled"，LINE 訊息發送至 {lineUserId}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorDisableResponse'
+
+  /admin/doctors/{doctorId}/treatments:
+    get:
+      tags:
+        - 管理醫師資料
+      summary: 取得醫師可看診項目
+      operationId: getDoctorTreatments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: doctorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 醫師診療項目列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TreatmentResponse'
+
+    post:
+      tags:
+        - 管理醫師資料
+      summary: 管理員新增醫師診療項目
+      description: |
+        **Feature:** 管理醫師資料.feature
+
+        **Rules:**
+        - 可設定醫師可看診項目
+        - 相同醫師不可重複關聯相同診療項目
+      operationId: addDoctorTreatment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: doctorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddDoctorTreatmentRequest'
+      responses:
+        '201':
+          description: 醫師診療項目關聯被建立
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '409':
+          description: 操作失敗 - 相同醫師已關聯此診療項目
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/doctors/{doctorId}/treatments/{treatmentId}:
+    delete:
+      tags:
+        - 管理醫師資料
+      summary: 移除醫師診療項目關聯
+      operationId: removeDoctorTreatment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: doctorId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: treatmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 關聯已移除
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ============================================
+  # 管理診療類型.feature
+  # ============================================
+  /admin/treatments:
+    get:
+      tags:
+        - 管理診療類型
+      summary: 取得診療類型列表
+      operationId: getTreatments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 診療類型列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TreatmentResponse'
+
+    post:
+      tags:
+        - 管理診療類型
+      summary: 管理員新增診療類型
+      description: |
+        **Feature:** 管理診療類型.feature
+
+        **Rules:**
+        - 可新增診療類型
+        - 扣除分鐘數必須大於 0
+        - 扣除分鐘數不可超過 30 分鐘（單一時段長度）
+      operationId: createTreatment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTreatmentRequest'
+      responses:
+        '201':
+          description: 診療類型記錄被建立
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentResponse'
+        '400':
+          description: 操作失敗 - 扣除分鐘數無效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/treatments/{treatmentId}:
+    get:
+      tags:
+        - 管理診療類型
+      summary: 取得診療類型詳情
+      operationId: getTreatmentById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: treatmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 診療類型詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentResponse'
+
+    put:
+      tags:
+        - 管理診療類型
+      summary: 管理員修改診療類型
+      description: |
+        **Feature:** 管理診療類型.feature
+
+        **Rules:**
+        - 可修改診療類型的扣除分鐘數
+        - 扣除分鐘數必須大於 0
+        - 扣除分鐘數不可超過 30 分鐘（單一時段長度）
+      operationId: updateTreatment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: treatmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTreatmentRequest'
+      responses:
+        '200':
+          description: 診療類型的扣除分鐘數為 {durationMinutes}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentResponse'
+        '400':
+          description: 操作失敗 - 扣除分鐘數為 0 或負數或超過 30 分鐘無效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/treatments/{treatmentId}/disable:
+    post:
+      tags:
+        - 管理診療類型
+      summary: 管理員停用診療類型
+      description: |
+        **Feature:** 管理診療類型.feature
+
+        **Rules:**
+        - 可停用診療類型
+        - 停用診療類型時自動取消所有使用此類型的未來預約並通知病患
+        - 停用診療類型時已完成的預約不受影響
+      operationId: disableTreatment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: treatmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 診療類型狀態為停用，預約 {appointmentId} 狀態為 "cancelled"，LINE 訊息發送至 {lineUserId}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentDisableResponse'
+
+  # ============================================
+  # 管理班表.feature
+  # ============================================
+  /admin/schedules:
+    get:
+      tags:
+        - 管理班表
+      summary: 取得班表列表
+      operationId: getSchedules
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: doctor_id
+          in: query
+          schema:
+            type: string
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 班表列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleResponse'
+
+    post:
+      tags:
+        - 管理班表
+      summary: 管理員建立班表
+      description: |
+        **Feature:** 管理班表.feature
+
+        **Rules:**
+        - 同一醫師在同一日期只能有一筆班表
+      operationId: createSchedule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+      responses:
+        '201':
+          description: 班表記錄被建立
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleResponse'
+        '409':
+          description: 操作失敗 - 相同醫師相同日期無法重複建立班表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/schedules/{scheduleId}:
+    get:
+      tags:
+        - 管理班表
+      summary: 取得班表詳情
+      operationId: getScheduleById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 班表詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleResponse'
+
+  /admin/schedules/{scheduleId}/slots:
+    get:
+      tags:
+        - 管理班表
+      summary: 取得班表時段列表
+      operationId: getScheduleSlots
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 時段列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SlotResponse'
+
+    post:
+      tags:
+        - 管理班表
+      summary: 管理員建立時段
+      description: |
+        **Feature:** 管理班表.feature
+
+        **Rules:**
+        - 時段總分鐘數預設為 30 分鐘
+      operationId: createSlot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSlotRequest'
+      responses:
+        '201':
+          description: 時段記錄被建立，時段總分鐘數為 30，時段剩餘分鐘數為 30
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+
+  /admin/schedules/{scheduleId}/extra-slots:
+    post:
+      tags:
+        - 管理班表
+      summary: 管理員新增加診時段
+      description: |
+        **Feature:** 管理班表.feature
+
+        **Rules:**
+        - 可為醫師新增額外時段（加診）
+      operationId: createExtraSlot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSlotRequest'
+      responses:
+        '201':
+          description: 時段記錄被建立
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+
+  /admin/schedules/{scheduleId}/suspend:
+    post:
+      tags:
+        - 管理班表
+      summary: 管理員標記停診
+      description: |
+        **Feature:** 管理班表.feature
+
+        **Rules:**
+        - 標記停診時已預約者必須發送通知
+        - 標記停診時必須將班表設為不可預約
+      operationId: suspendSchedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 該班表 is_available 為 false，LINE 訊息發送至 {lineUserId}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleSuspendResponse'
+
+  /admin/schedules/{scheduleId}/resume:
+    post:
+      tags:
+        - 管理班表
+      summary: 管理員恢復班表為可預約
+      description: |
+        **Feature:** 管理班表.feature
+
+        **Rules:**
+        - 停診恢復僅限未來日期
+      operationId: resumeSchedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 該班表 is_available 為 true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleResponse'
+        '400':
+          description: 操作失敗 - 過去或當日的停診無法恢復
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/slots/{slotId}/remaining:
+    patch:
+      tags:
+        - 管理班表
+      summary: 管理員調整時段餘量
+      description: |
+        **Feature:** 管理班表.feature
+
+        **Rules:**
+        - 可手動調整時段剩餘分鐘數
+        - 剩餘分鐘數為 0 時不可手動調整
+      operationId: updateSlotRemaining
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSlotRemainingRequest'
+      responses:
+        '200':
+          description: 時段剩餘分鐘數為 {remainingMinutes}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '400':
+          description: 操作失敗 - 餘量為 0 時無法調整
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # 即時更新時段餘量.feature
+  # ============================================
+  /slots:
+    get:
+      tags:
+        - 即時更新
+      summary: 取得可預約時段列表
+      description: |
+        **Feature:** 即時更新時段餘量.feature
+
+        病患端取得可預約時段，包含剩餘分鐘數資訊。
+
+        即時更新透過 Supabase Realtime 訂閱實現：
+        - 新預約時即時廣播時段剩餘分鐘數減少
+        - 取消預約時即時廣播時段剩餘分鐘數增加
+        - 修改預約時即時廣播原時段釋放與新時段扣除
+      operationId: getAvailableSlots
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: doctor_id
+          in: query
+          schema:
+            type: string
+        - name: treatment_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 病患 B 看到時段剩餘分鐘數為 {remainingMinutes}
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailableSlotResponse'
+
+  # ============================================
+  # 預約狀態自動更新.feature
+  # ============================================
+  /system/auto-update-status:
+    post:
+      tags:
+        - 系統排程
+      summary: 系統執行自動狀態更新
+      description: |
+        **Feature:** 預約狀態自動更新.feature
+
+        **Rules:**
+        - 當日預約時段結束後「已預約」狀態自動改為「未報到」
+        - 未報到時病患的未報到次數加 1
+        - 未報到次數達到 3 次後停止累計
+        - 黑名單狀態由批次任務檢查更新
+      operationId: autoUpdateStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 系統自動將預約狀態更新為 "no_show"，未報到次數為 {noShowCount}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoUpdateStatusResponse'
+
+  # ============================================
+  # 黑名單管理.feature (批次任務)
+  # ============================================
+  /system/blacklist-check:
+    post:
+      tags:
+        - 系統排程
+      summary: 系統執行每日黑名單批次檢查
+      description: |
+        **Feature:** 黑名單管理.feature
+
+        **Rules:**
+        - 未報到累計達 3 次自動加入黑名單（批次處理）
+        - 黑名單病患無法使用預約系統
+      operationId: dailyBlacklistCheck
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 病患狀態 is_blacklisted 為 true，黑名單記錄被建立
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlacklistCheckResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ============================================
+    # 共用 Schemas
+    # ============================================
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - details
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    # ============================================
+    # LINE入口驗證
+    # ============================================
+    LineEntryRequest:
+      type: object
+      required:
+        - line_user_id
+      properties:
+        line_user_id:
+          type: string
+          description: LINE User ID
+
+    LineEntryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        next_step:
+          type: string
+          enum: [verification, booking]
+        patient_id:
+          type: string
+
+    BlacklistErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+          example: 您已被停權，無法使用預約服務
+        reason:
+          type: string
+          example: 累計未報到 3 次
+        appeal_info:
+          type: string
+          description: 申訴管道資訊
+
+    # ============================================
+    # 真人驗證
+    # ============================================
+    SendVerificationRequest:
+      type: object
+      required:
+        - line_user_id
+      properties:
+        line_user_id:
+          type: string
+
+    SendVerificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    VerifyCodeRequest:
+      type: object
+      required:
+        - line_user_id
+        - code
+      properties:
+        line_user_id:
+          type: string
+        code:
+          type: string
+          pattern: '^\d{6}$'
+          description: 6 位數驗證碼
+
+    VerifyCodeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        token:
+          type: string
+          description: 驗證成功後的 Token
+
+    # ============================================
+    # 病患資料
+    # ============================================
+    PatientProfileRequest:
+      type: object
+      required:
+        - line_user_id
+        - name
+        - phone
+        - national_id
+        - birth_date
+      properties:
+        line_user_id:
+          type: string
+        name:
+          type: string
+          minLength: 2
+          maxLength: 20
+          description: 姓名必須為 2-20 字元
+        phone:
+          type: string
+          pattern: '^09\d{8}$'
+          description: 電話必須為台灣手機格式
+        national_id:
+          type: string
+          pattern: '^[A-Z][12]\d{8}$'
+          description: 身分證字號必須符合台灣身分證格式
+        birth_date:
+          type: string
+          format: date
+          description: 出生年月日不可為未來日期
+
+    PatientProfileResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        line_user_id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        national_id:
+          type: string
+        birth_date:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+
+    PatientResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        line_user_id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        national_id:
+          type: string
+        birth_date:
+          type: string
+          format: date
+        note:
+          type: string
+          description: 病患備註（內部註記，病患不可見）
+        is_blacklisted:
+          type: boolean
+        no_show_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    UpdatePatientNoteRequest:
+      type: object
+      required:
+        - note
+      properties:
+        note:
+          type: string
+
+    # ============================================
+    # 預約相關
+    # ============================================
+    AppointmentStatus:
+      type: string
+      enum: [booked, checked_in, completed, no_show, cancelled]
+      description: |
+        預約狀態：
+        - booked: 已預約
+        - checked_in: 已報到
+        - completed: 已完成
+        - no_show: 未報到
+        - cancelled: 已取消
+
+    CreateAppointmentRequest:
+      type: object
+      required:
+        - line_user_id
+        - slot_id
+        - treatment_id
+      properties:
+        line_user_id:
+          type: string
+        slot_id:
+          type: string
+        treatment_id:
+          type: string
+        patient_id:
+          type: string
+          description: 若已有病患資料則帶入
+
+    UpdateAppointmentRequest:
+      type: object
+      properties:
+        slot_id:
+          type: string
+        treatment_id:
+          type: string
+
+    AppointmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        patient_id:
+          type: string
+        slot_id:
+          type: string
+        treatment_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/AppointmentStatus'
+        status_label:
+          type: string
+          description: 狀態中文標籤
+        appointment_date:
+          type: string
+          format: date
+        slot_start_time:
+          type: string
+          example: "09:00"
+        slot_end_time:
+          type: string
+          example: "09:30"
+        doctor_name:
+          type: string
+        treatment_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    AppointmentErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+          example: 時段已滿
+        alternative_slots:
+          type: array
+          description: 返回其他可用時段建議
+          items:
+            $ref: '#/components/schemas/AvailableSlotResponse'
+
+    # ============================================
+    # 管理員預約
+    # ============================================
+    AdminCreateAppointmentRequest:
+      type: object
+      required:
+        - patient_id
+        - slot_id
+        - treatment_id
+      properties:
+        patient_id:
+          type: string
+        slot_id:
+          type: string
+        treatment_id:
+          type: string
+
+    AdminUpdateAppointmentRequest:
+      type: object
+      properties:
+        slot_id:
+          type: string
+        treatment_id:
+          type: string
+
+    CancelAppointmentRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: 取消原因
+
+    UpdateStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/AppointmentStatus'
+
+    AdminAppointmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        patient_id:
+          type: string
+        patient_name:
+          type: string
+        patient_phone:
+          type: string
+        patient_line_user_id:
+          type: string
+        slot_id:
+          type: string
+        treatment_id:
+          type: string
+        treatment_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/AppointmentStatus'
+        status_label:
+          type: string
+        appointment_date:
+          type: string
+          format: date
+        slot_start_time:
+          type: string
+        slot_end_time:
+          type: string
+        doctor_id:
+          type: string
+        doctor_name:
+          type: string
+        cancel_reason:
+          type: string
+        updated_by:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    # ============================================
+    # 管理員帳號
+    # ============================================
+    AdminLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AdminLoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        token:
+          type: string
+        admin:
+          $ref: '#/components/schemas/AdminAccountResponse'
+
+    AccountLockErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        locked_until:
+          type: string
+          format: date-time
+          description: 帳號鎖定至
+
+    CreateAdminAccountRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          description: 密碼最小長度為 8 字元，必須包含大寫、小寫、數字
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, super_admin]
+
+    UpdateAdminAccountRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, super_admin]
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - new_password
+      properties:
+        new_password:
+          type: string
+          minLength: 8
+
+    AdminAccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, super_admin]
+        is_active:
+          type: boolean
+        login_fail_count:
+          type: integer
+        locked_until:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    # ============================================
+    # 黑名單
+    # ============================================
+    AddBlacklistRequest:
+      type: object
+      required:
+        - patient_id
+        - reason
+      properties:
+        patient_id:
+          type: string
+        reason:
+          type: string
+
+    BlacklistResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        patient_id:
+          type: string
+        patient_name:
+          type: string
+        reason:
+          type: string
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    BlacklistCheckResponse:
+      type: object
+      properties:
+        processed_count:
+          type: integer
+        blacklisted_patients:
+          type: array
+          items:
+            type: object
+            properties:
+              patient_id:
+                type: string
+              no_show_count:
+                type: integer
+
+    # ============================================
+    # 醫師
+    # ============================================
+    CreateDoctorRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+
+    UpdateDoctorRequest:
+      type: object
+      properties:
+        name:
+          type: string
+
+    DoctorResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        is_active:
+          type: boolean
+        treatments:
+          type: array
+          items:
+            $ref: '#/components/schemas/TreatmentResponse'
+        created_at:
+          type: string
+          format: date-time
+
+    DoctorDisableResponse:
+      type: object
+      properties:
+        doctor:
+          $ref: '#/components/schemas/DoctorResponse'
+        cancelled_appointments:
+          type: array
+          items:
+            type: object
+            properties:
+              appointment_id:
+                type: string
+              patient_line_user_id:
+                type: string
+              notified:
+                type: boolean
+
+    AddDoctorTreatmentRequest:
+      type: object
+      required:
+        - treatment_id
+      properties:
+        treatment_id:
+          type: string
+
+    # ============================================
+    # 診療類型
+    # ============================================
+    CreateTreatmentRequest:
+      type: object
+      required:
+        - name
+        - duration_minutes
+      properties:
+        name:
+          type: string
+        duration_minutes:
+          type: integer
+          minimum: 1
+          maximum: 30
+          description: 扣除分鐘數必須大於 0，不可超過 30 分鐘
+
+    UpdateTreatmentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        duration_minutes:
+          type: integer
+          minimum: 1
+          maximum: 30
+
+    TreatmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        duration_minutes:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    TreatmentDisableResponse:
+      type: object
+      properties:
+        treatment:
+          $ref: '#/components/schemas/TreatmentResponse'
+        cancelled_appointments:
+          type: array
+          items:
+            type: object
+            properties:
+              appointment_id:
+                type: string
+              patient_line_user_id:
+                type: string
+              notified:
+                type: boolean
+
+    # ============================================
+    # 班表與時段
+    # ============================================
+    CreateScheduleRequest:
+      type: object
+      required:
+        - doctor_id
+        - date
+      properties:
+        doctor_id:
+          type: string
+        date:
+          type: string
+          format: date
+
+    ScheduleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        doctor_id:
+          type: string
+        doctor_name:
+          type: string
+        date:
+          type: string
+          format: date
+        is_available:
+          type: boolean
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotResponse'
+        created_at:
+          type: string
+          format: date-time
+
+    ScheduleSuspendResponse:
+      type: object
+      properties:
+        schedule:
+          $ref: '#/components/schemas/ScheduleResponse'
+        notified_patients:
+          type: array
+          items:
+            type: object
+            properties:
+              appointment_id:
+                type: string
+              patient_line_user_id:
+                type: string
+
+    CreateSlotRequest:
+      type: object
+      required:
+        - start_time
+        - end_time
+      properties:
+        start_time:
+          type: string
+          example: "09:00"
+        end_time:
+          type: string
+          example: "09:30"
+
+    UpdateSlotRemainingRequest:
+      type: object
+      required:
+        - remaining_minutes
+      properties:
+        remaining_minutes:
+          type: integer
+          minimum: 0
+          maximum: 30
+
+    SlotResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        schedule_id:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        total_minutes:
+          type: integer
+          example: 30
+        remaining_minutes:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    AvailableSlotResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        schedule_id:
+          type: string
+        doctor_id:
+          type: string
+        doctor_name:
+          type: string
+        date:
+          type: string
+          format: date
+        start_time:
+          type: string
+        end_time:
+          type: string
+        remaining_minutes:
+          type: integer
+
+    # ============================================
+    # 系統排程
+    # ============================================
+    AutoUpdateStatusResponse:
+      type: object
+      properties:
+        processed_count:
+          type: integer
+        updated_appointments:
+          type: array
+          items:
+            type: object
+            properties:
+              appointment_id:
+                type: string
+              patient_id:
+                type: string
+              new_no_show_count:
+                type: integer

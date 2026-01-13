@@ -133,7 +133,7 @@ async function main() {
   let scheduleCount = 0;
   let timeSlotCount = 0;
 
-  for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+  for (let dayOffset = -1; dayOffset < 14; dayOffset++) {
     const date = addDays(today, dayOffset);
     const dateStr = format(date, 'yyyy-MM-dd');
 

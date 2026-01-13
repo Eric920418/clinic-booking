@@ -112,7 +112,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     if (!parsed.success) {
       return NextResponse.json({
         success: false,
-        error: { code: 'E001', message: parsed.error.errors[0].message },
+        error: { code: 'E001', message: parsed.error.issues[0].message },
       }, { status: 400 });
     }
 
