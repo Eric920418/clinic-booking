@@ -5,12 +5,40 @@ Feature: 管理醫師資料
   我想要 新增、編輯、停用醫師資料
 
   Rule: 可新增醫師
-    
-    #TODO
+
+    Example: 新增醫師成功
+      Given 醫師姓名為 "王大明"
+      When 管理員新增醫師
+      Then 醫師建立成功
+      And 醫師狀態為啟用
+
+    Example: 醫師姓名不可少於 2 字元
+      Given 醫師姓名為 "王"
+      When 管理員新增醫師
+      Then 操作失敗
+
+    Example: 醫師姓名不可超過 20 字元
+      Given 醫師姓名為 "王大明王大明王大明王大明王大明王"
+      When 管理員新增醫師
+      Then 操作失敗
 
   Rule: 可編輯醫師姓名
-    
-    #TODO
+
+    Example: 編輯醫師姓名成功
+      Given 醫師 ID 為 "doctor123"
+      And 醫師原姓名為 "王大明"
+      When 管理員將醫師姓名修改為 "王小明"
+      Then 醫師姓名更新為 "王小明"
+
+    Example: 編輯醫師姓名不可少於 2 字元
+      Given 醫師 ID 為 "doctor123"
+      When 管理員將醫師姓名修改為 "王"
+      Then 操作失敗
+
+    Example: 編輯醫師姓名不可超過 20 字元
+      Given 醫師 ID 為 "doctor123"
+      When 管理員將醫師姓名修改為 "王大明王大明王大明王大明王大明王"
+      Then 操作失敗
 
   Rule: 可設定醫師可看診項目
     

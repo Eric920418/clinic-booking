@@ -22,6 +22,9 @@ export { createPatient, createBlacklistedPatient } from './patient'
 // 醫師
 export { createDoctor, createInactiveDoctor } from './doctor'
 
+// 醫師診療項目關聯
+export { createDoctorTreatment, createDoctorTreatments } from './doctor-treatment'
+
 // 診療類型
 export {
   createTreatmentType,

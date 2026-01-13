@@ -132,18 +132,21 @@ export async function POST(request: NextRequest) {
 
     // 8. Rule: 時段剩餘分鐘數必須大於等於診療所需分鐘數
     if (timeSlot.remainingMinutes < treatmentType.durationMinutes) {
-      // 查詢同一日期的其他可用時段
+      // 查詢同一日期、同一時段的其他醫師可用時段
       const alternativeSlots = await prisma.timeSlot.findMany({
         where: {
           schedule: {
             date: appointmentDate,
-            doctorId: timeSlot.schedule.doctorId,
+            doctorId: { not: timeSlot.schedule.doctorId }, // 其他醫師
           },
+          startTime: timeSlot.startTime, // 同一時段
+          endTime: timeSlot.endTime,
           remainingMinutes: { gte: treatmentType.durationMinutes },
-          id: { not: slotId },
         },
         include: {
-          schedule: true,
+          schedule: {
+            include: { doctor: true },
+          },
         },
       })
 
@@ -151,9 +154,11 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'E003',
-          message: '時段已滿，剩餘分鐘數不足',
+          message: '時段已滿',
           alternativeSlots: alternativeSlots.map((slot) => ({
-            id: slot.id,
+            slotId: slot.id,
+            doctorId: slot.schedule.doctorId,
+            doctorName: slot.schedule.doctor.name,
             startTime: slot.startTime,
             endTime: slot.endTime,
             remainingMinutes: slot.remainingMinutes,
@@ -261,11 +266,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (error instanceof Error && error.message === '時段已滿') {
+      // 併發情況下交易失敗，返回空的替代選項
+      // （因為此時無法確定原時段資訊來查詢替代選項）
       return NextResponse.json(
         {
           success: false,
           error: 'E003',
           message: '時段已滿',
+          alternativeSlots: [],
         },
         { status: 400 }
       )

@@ -19,6 +19,14 @@ const updateStatusSchema = z.object({
   cancelledReason: z.string().optional(),
 });
 
+// 支援 PATCH 方法（別名）
+export async function PATCH(
+  request: NextRequest,
+  context: RouteParams
+): Promise<NextResponse<ApiResponse>> {
+  return PUT(request, context);
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: RouteParams
@@ -76,9 +84,32 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    // 規則：未報到狀態可由管理員改為已報到（補報到）
-    // 對應規格：spec/features/管理員更新預約狀態.feature - 未報到狀態可由管理員改為已報到
-    // 允許的狀態轉換已在此處理
+    // 規則：已預約狀態不可直接更新為已完成（必須先報到）
+    // 對應規格：spec/features/管理員更新預約狀態.feature - Rule: 已預約狀態不可直接更新為已完成
+    if (appointment.status === 'booked' && status === 'completed') {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E008', message: '已預約狀態不可直接更新為已完成，必須先報到' },
+      }, { status: 400 });
+    }
+
+    // 規則：未報到狀態的限制轉換
+    // 對應規格：spec/features/管理員更新預約狀態.feature - Rule: 未報到狀態可改為已報到（補報到）
+    if (appointment.status === 'no_show') {
+      // 未報到只能改為 checked_in（補報到）
+      if (status === 'booked') {
+        return NextResponse.json({
+          success: false,
+          error: { code: 'E008', message: '未報到狀態無法改為已預約' },
+        }, { status: 400 });
+      }
+      if (status === 'completed') {
+        return NextResponse.json({
+          success: false,
+          error: { code: 'E008', message: '未報到狀態無法直接改為已完成' },
+        }, { status: 400 });
+      }
+    }
 
     const updateData: {
       status: typeof status;
