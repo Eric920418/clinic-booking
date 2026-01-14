@@ -14,13 +14,19 @@ import {
   createTreatmentType,
   createSchedule,
   createTimeSlot,
-  createAppointment,
   createDoctorTreatment,
 } from '../factories'
 import { prisma } from '../helpers/db'
 
-// 測試上下文，用於在步驟間傳遞資料
-let context: Record<string, any> = {}
+// 替代時段回應類型
+interface AlternativeSlot {
+  slotId: string
+  doctorId: string
+  doctorName: string
+  startTime: string
+  endTime: string
+  remainingMinutes: number
+}
 
 // 取得未來日期（用於測試）
 function getFutureDate(daysFromNow: number = 7): Date {
@@ -34,7 +40,6 @@ function getFutureDate(daysFromNow: number = 7): Date {
 test.beforeEach(async () => {
   // 清空資料庫，確保測試隔離
   await cleanupDatabase()
-  context = {}
 })
 
 test.describe('使用 Row-Level Lock 鎖定時段記錄', () => {
@@ -43,7 +48,7 @@ test.describe('使用 Row-Level Lock 鎖定時段記錄', () => {
    * #TODO - 此 Rule 尚未定義具體 Example
    */
 
-  test.skip('TODO: 待定義具體測試案例', async ({ request }) => {
+  test.skip('TODO: 待定義具體測試案例', async () => {
     // 此 Rule 需要定義具體的測試場景
     // 建議場景：驗證併發請求時使用 SELECT ... FOR UPDATE
   })
@@ -56,42 +61,31 @@ test.describe('先取得鎖定者預約成功', () => {
 
   test('第一位用戶取得鎖定成功預約', async ({ request }) => {
     // Given 準備醫師
-    const doctorA = await createDoctor({ name: '王醫師' })
-    context['doctorAId'] = doctorA.id
+    const doctor = await createDoctor({ name: '王醫師' })
 
     // And 準備診療類型 "內科"，所需分鐘數為 5
     const treatmentType = await createTreatmentType({
       name: '內科',
       durationMinutes: 5,
     })
-    context['treatmentTypeId'] = treatmentType.id
 
     // And 準備班表與時段，時段剩餘分鐘數為 5（剛好夠一次內科預約）
     const schedule = await createSchedule({
-      doctorId: doctorA.id,
-      date: getFutureDate(7), // 使用未來日期
+      doctorId: doctor.id,
+      date: getFutureDate(7),
     })
     const timeSlot = await createTimeSlot({
       scheduleId: schedule.id,
       startTime: new Date('1970-01-01T09:00:00'),
       endTime: new Date('1970-01-01T09:30:00'),
-      remainingMinutes: 5, // 剛好等於內科所需分鐘數
+      remainingMinutes: 5,
     })
-    context['timeSlotId'] = timeSlot.id
 
     // And 準備病患 A
-    const patientA = await createPatient({
+    await createPatient({
       lineUserId: 'UpatientA_concurrent_001',
       name: '病患A',
     })
-    context['patientAId'] = patientA.id
-
-    // And 準備病患 B（用於後續併發測試）
-    const patientB = await createPatient({
-      lineUserId: 'UpatientB_concurrent_002',
-      name: '病患B',
-    })
-    context['patientBId'] = patientB.id
 
     // When 病患 A 建立預約（第一位取得鎖定）
     const response = await request.post('/api/patient/appointments', {
@@ -101,7 +95,6 @@ test.describe('先取得鎖定者預約成功', () => {
         treatmentId: treatmentType.id,
       },
     })
-    context['responseA'] = response
 
     // Then 病患 A 預約成功
     expect(response.ok()).toBeTruthy()
@@ -140,14 +133,17 @@ test.describe('先取得鎖定者預約成功', () => {
       remainingMinutes: 5,
     })
 
-    // And 準備兩位病患
+    // And 準備兩位病患（使用唯一的身分證字號避免衝突）
+    const ts = Date.now()
     await createPatient({
       lineUserId: 'Uconcurrent_test_A',
       name: '併發測試病患A',
+      nationalId: `A${String(ts).slice(-9)}`,
     })
     await createPatient({
       lineUserId: 'Uconcurrent_test_B',
       name: '併發測試病患B',
+      nationalId: `B${String(ts + 1).slice(-9)}`,
     })
 
     // When 兩位病患同時發送預約請求（使用 Promise.all 模擬併發）
@@ -169,9 +165,6 @@ test.describe('先取得鎖定者預約成功', () => {
     ])
 
     // Then 只有一位預約成功，另一位因餘量不足失敗
-    const bodyA = await responseA.json()
-    const bodyB = await responseB.json()
-
     // 計算成功和失敗的數量
     const successCount = [responseA.ok(), responseB.ok()].filter(Boolean).length
     const failCount = [!responseA.ok(), !responseB.ok()].filter(Boolean).length
@@ -221,7 +214,7 @@ test.describe('後取得鎖定者檢查時段餘量不足則失敗', () => {
 
     // And 準備病患 A（使用唯一的身分證字號避免衝突）
     const timestamp = Date.now()
-    const patientA = await createPatient({
+    await createPatient({
       lineUserId: 'Usequence_test_A',
       name: '順序測試病患A',
       nationalId: `A${String(timestamp).slice(-9)}`,
@@ -276,7 +269,7 @@ test.describe('交易失敗時必須回滾所有變更', () => {
    * #TODO - 此 Rule 尚未定義具體 Example
    */
 
-  test.skip('TODO: 待定義具體測試案例', async ({ request }) => {
+  test.skip('TODO: 待定義具體測試案例', async () => {
     // 此 Rule 需要定義具體的測試場景
     // 建議場景：
     // - 預約過程中發生錯誤時，時段餘量不應被扣減
@@ -328,13 +321,13 @@ test.describe('時段餘量不足時返回錯誤訊息與替代選項', () => {
     // And 準備醫師 B 的班表與時段（同一日期同一時段），剩餘分鐘數為 10
     const scheduleB = await createSchedule({
       doctorId: doctorB.id,
-      date: futureDate, // 同一日期
+      date: futureDate,
     })
-    const timeSlotB = await createTimeSlot({
+    await createTimeSlot({
       scheduleId: scheduleB.id,
-      startTime: new Date('1970-01-01T09:00:00'), // 同一時段
+      startTime: new Date('1970-01-01T09:00:00'),
       endTime: new Date('1970-01-01T09:30:00'),
-      remainingMinutes: 10, // 有餘量
+      remainingMinutes: 10,
     })
 
     // And 準備病患
@@ -371,7 +364,7 @@ test.describe('時段餘量不足時返回錯誤訊息與替代選項', () => {
 
     // 驗證替代選項包含醫師 B 的可用時段
     const hasSlotB = body.alternativeSlots.some(
-      (slot: any) =>
+      (slot: AlternativeSlot) =>
         slot.doctorId === doctorB.id || slot.doctorName === '醫師B'
     )
     expect(hasSlotB).toBe(true)

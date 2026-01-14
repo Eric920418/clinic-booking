@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'VALIDATION_ERROR',
-          message: error.errors[0]?.message || '請求資料格式錯誤',
+          message: error.issues[0]?.message || '請求資料格式錯誤',
         },
         { status: 400 }
       )

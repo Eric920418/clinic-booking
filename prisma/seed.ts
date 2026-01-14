@@ -130,71 +130,67 @@ async function main() {
   // =============================================
   console.log('📅 建立班表與時段...');
   const today = new Date();
+
+  // 時段配置（上午 09:00-12:00，下午 14:00-17:00）
+  const timeSlotConfigs = [
+    { startHour: 9, startMin: 0 },
+    { startHour: 9, startMin: 30 },
+    { startHour: 10, startMin: 0 },
+    { startHour: 10, startMin: 30 },
+    { startHour: 11, startMin: 0 },
+    { startHour: 11, startMin: 30 },
+    { startHour: 14, startMin: 0 },
+    { startHour: 14, startMin: 30 },
+    { startHour: 15, startMin: 0 },
+    { startHour: 15, startMin: 30 },
+    { startHour: 16, startMin: 0 },
+    { startHour: 16, startMin: 30 },
+  ];
+
   let scheduleCount = 0;
   let timeSlotCount = 0;
 
+  // 使用 transaction 批量處理每一天的資料
   for (let dayOffset = -1; dayOffset < 14; dayOffset++) {
     const date = addDays(today, dayOffset);
     const dateStr = format(date, 'yyyy-MM-dd');
 
-    for (const doctor of doctors) {
-      // 建立班表
-      const schedule = await prisma.schedule.upsert({
-        where: {
-          doctorId_date: {
-            doctorId: doctor.id,
-            date: new Date(dateStr),
-          },
-        },
+    // 批量建立當天所有醫師的班表
+    const scheduleOps = doctors.map((doctor) =>
+      prisma.schedule.upsert({
+        where: { doctorId_date: { doctorId: doctor.id, date: new Date(dateStr) } },
         update: {},
-        create: {
-          doctorId: doctor.id,
-          date: new Date(dateStr),
-          isAvailable: true,
-        },
-      });
-      scheduleCount++;
+        create: { doctorId: doctor.id, date: new Date(dateStr), isAvailable: true },
+      })
+    );
+    const schedules = await prisma.$transaction(scheduleOps);
+    scheduleCount += schedules.length;
 
-      // 建立時段（上午 09:00-12:00，下午 14:00-17:00）
-      const timeSlotConfigs = [
-        // 上午時段
-        { startHour: 9, startMin: 0 },
-        { startHour: 9, startMin: 30 },
-        { startHour: 10, startMin: 0 },
-        { startHour: 10, startMin: 30 },
-        { startHour: 11, startMin: 0 },
-        { startHour: 11, startMin: 30 },
-        // 下午時段
-        { startHour: 14, startMin: 0 },
-        { startHour: 14, startMin: 30 },
-        { startHour: 15, startMin: 0 },
-        { startHour: 15, startMin: 30 },
-        { startHour: 16, startMin: 0 },
-        { startHour: 16, startMin: 30 },
-      ];
+    // 建立時段資料
+    const timeSlotData: { id: string; scheduleId: string; startTime: Date; endTime: Date; totalMinutes: number; remainingMinutes: number }[] = [];
 
+    for (const schedule of schedules) {
+      const doctor = doctors.find((d) => d.id === schedule.doctorId)!;
       for (const config of timeSlotConfigs) {
         const startTime = setMinutes(setHours(new Date('2000-01-01'), config.startHour), config.startMin);
         const endTime = setMinutes(setHours(new Date('2000-01-01'), config.startHour), config.startMin + 30);
-
         const slotId = `slot-${doctor.id}-${dateStr}-${format(startTime, 'HHmm')}`;
-        
-        await prisma.timeSlot.upsert({
-          where: { id: slotId },
-          update: {},
-          create: {
-            id: slotId,
-            scheduleId: schedule.id,
-            startTime,
-            endTime,
-            totalMinutes: 30,
-            remainingMinutes: 30,
-          },
+
+        timeSlotData.push({
+          id: slotId,
+          scheduleId: schedule.id,
+          startTime,
+          endTime,
+          totalMinutes: 30,
+          remainingMinutes: 30,
         });
-        timeSlotCount++;
       }
     }
+
+    await prisma.timeSlot.createMany({ data: timeSlotData, skipDuplicates: true });
+    timeSlotCount += timeSlotData.length;
   }
+
   console.log(`  ✓ 建立 ${scheduleCount} 筆班表，${timeSlotCount} 個時段`);
 
   // =============================================

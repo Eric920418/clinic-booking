@@ -193,14 +193,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 10. 使用交易建立預約並扣除時段分鐘數
+    // 10. 使用交易建立預約並扣除時段分鐘數（使用 Row-Level Lock 防止併發）
     const appointment = await prisma.$transaction(async (tx) => {
-      // 再次檢查時段餘量（防止併發問題）
-      const currentSlot = await tx.timeSlot.findUnique({
-        where: { id: slotId },
-      })
+      // 使用 SELECT ... FOR UPDATE 鎖定時段記錄
+      // 這會阻止其他交易同時讀取並修改同一筆時段記錄
+      const [currentSlot] = await tx.$queryRaw<
+        Array<{ id: string; remaining_minutes: number }>
+      >`SELECT id, remaining_minutes FROM time_slots WHERE id = ${slotId} FOR UPDATE`
 
-      if (!currentSlot || currentSlot.remainingMinutes < treatmentType.durationMinutes) {
+      if (!currentSlot || currentSlot.remaining_minutes < treatmentType.durationMinutes) {
         throw new Error('時段已滿')
       }
 

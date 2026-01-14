@@ -161,9 +161,6 @@ export default function ProfilePage() {
               <label className="text-sm font-medium text-neutral-700">
                 真實姓名
               </label>
-              <span className="text-xs text-neutral-400">
-                {getCharCount(formData.name, 5)}
-              </span>
             </div>
             <input
               type="text"

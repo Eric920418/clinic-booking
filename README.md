@@ -264,7 +264,7 @@ pnpm exec playwright show-report
 
 | Feature | 測試檔案 | Schema 分析 | 測試程式碼 | API 實作 | 狀態 |
 |---------|----------|-------------|------------|----------|------|
-| LINE 入口驗證 | `tests/e2e/liff/line-entry-verification.spec.ts` | ✅ GO | ✅ 已完成 | 🔴 未實作 | 🔴 0/3 紅燈 |
+| LINE 入口驗證 | `tests/e2e/liff/line-entry-verification.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 3/3 通過 |
 | 真人驗證 | `tests/e2e/liff/verification.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 8/8 通過 |
 | 管理員登入 | `tests/e2e/admin/login.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 8/8 通過 |
 | 病患建立預約 | `tests/e2e/liff/patient-create-appointment.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 11/11 通過 |
@@ -285,14 +285,14 @@ pnpm exec playwright show-report
 | 黑名單管理 - 批次檢查 | `tests/e2e/system/blacklist-batch.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 2/2 通過 |
 | 黑名單管理 - 後台操作 | `tests/e2e/admin/blacklist-management.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 3/5 通過 |
 | 即時更新時段餘量 | `tests/e2e/liff/realtime-slot-availability.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 3/3 通過 |
-| 併發預約控制 | `tests/e2e/liff/concurrent-booking.spec.ts` | ✅ GO | ✅ 已完成 | 🟡 部分實作 | 🟡 4/5 通過 |
+| 併發預約控制 | `tests/e2e/liff/concurrent-booking.spec.ts` | ✅ GO | ✅ 已完成 | ✅ 已實作 | 🟢 5/5 通過 |
 
 ### 測試案例摘要
 
-**LINE 入口驗證** (3 個測試案例，紅燈)：
-- 必須檢查用戶是否在黑名單中（黑名單用戶無法進入系統並顯示停權原因與申訴管道 - 🔴 紅燈）
-- 非黑名單用戶可進入驗證流程（🔴 紅燈）
-- 新用戶（無病患記錄）可進入驗證流程（🔴 紅燈）
+**LINE 入口驗證** (3 個測試案例，已通過)：
+- 必須檢查用戶是否在黑名單中（黑名單用戶無法進入系統並顯示停權原因與申訴管道 - ✅ 已通過）
+- 非黑名單用戶可進入驗證流程（✅ 已通過）
+- 新用戶（無病患記錄）可進入驗證流程（✅ 已通過）
 
 **真人驗證** (8 個測試案例)：
 - 系統必須產生 6 位數驗證碼
@@ -440,19 +440,19 @@ pnpm exec playwright show-report
 - 取消預約時即時廣播時段剩餘分鐘數增加（病患 A 取消預約後病患 B 看到餘量更新 - ✅ 已通過）
 - 修改預約時即時廣播原時段釋放與新時段扣除（病患 A 修改預約後病患 B 看到兩個時段餘量更新 - ✅ 已通過）
 
-**併發預約控制** (5 個測試案例，4 通過 1 紅燈)：
+**併發預約控制** (5 個測試案例，已通過)：
 - 使用 Row-Level Lock 鎖定時段記錄（#TODO - Feature File 標記為 #TODO）
 - 先取得鎖定者預約成功（第一位用戶取得鎖定成功預約 - ✅ 已通過、併發請求時先完成者預約成功 - ✅ 已通過）
 - 後取得鎖定者檢查時段餘量不足則失敗（第二位用戶因餘量不足失敗 - ✅ 已通過）
 - 交易失敗時必須回滾所有變更（#TODO - Feature File 標記為 #TODO）
-- 時段餘量不足時返回錯誤訊息與替代選項（衝突時提供同一時段其他醫師的可用選項 - 🔴 紅燈、餘量不足但無替代選項時只返回錯誤訊息 - ✅ 已通過）
+- 時段餘量不足時返回錯誤訊息與替代選項（衝突時提供同一時段其他醫師的可用選項 - ✅ 已通過、餘量不足但無替代選項時只返回錯誤訊息 - ✅ 已通過）
 
 ### 測試目錄結構
 
 ```
 tests/e2e/
 ├── liff/                        # LIFF 端 E2E 測試
-│   ├── line-entry-verification.spec.ts  # LINE 入口驗證測試（3 個案例，紅燈）
+│   ├── line-entry-verification.spec.ts  # LINE 入口驗證測試（3 個案例，已通過）
 │   ├── verification.spec.ts     # 真人驗證測試（8 個案例）
 │   ├── patient-data.spec.ts     # 病患資料處理測試（12 個案例，樣板）
 │   ├── patient-create-appointment.spec.ts  # 病患建立預約測試（11 個案例，已通過）
@@ -460,7 +460,7 @@ tests/e2e/
 │   ├── patient-cancel-appointment.spec.ts  # 病患取消預約測試（4 個案例，已通過）
 │   ├── patient-update-appointment.spec.ts  # 病患修改預約測試（9 個案例，已通過）
 │   ├── realtime-slot-availability.spec.ts  # 即時更新時段餘量測試（3 個案例，已通過）
-│   └── concurrent-booking.spec.ts          # 併發預約控制測試（5 個案例，4 通過）
+│   └── concurrent-booking.spec.ts          # 併發預約控制測試（5 個案例，已通過）
 ├── admin/                       # 管理後台 E2E 測試
 │   ├── login.spec.ts            # 管理員登入測試（8 個案例，已通過）
 │   ├── edit-appointment.spec.ts # 管理員編輯預約測試（3 個案例，已通過）
