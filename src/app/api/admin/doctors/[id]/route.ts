@@ -44,7 +44,7 @@ export async function PUT(
     // 驗證輸入
     const validationResult = updateDoctorSchema.safeParse(body)
     if (!validationResult.success) {
-      const firstError = validationResult.error.errors?.[0]?.message || '參數格式錯誤'
+      const firstError = validationResult.error.issues?.[0]?.message || '參數格式錯誤'
       return NextResponse.json({
         success: false,
         error: { code: 'E001', message: firstError },
