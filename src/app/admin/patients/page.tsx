@@ -4,25 +4,25 @@
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Pencil } from 'lucide-react';
 import EditPatientModal from '@/components/admin/EditPatientModal';
 
-// 患者類型
+// 患者類型（來自API）
 interface Patient {
   id: string;
   name: string;
-  idNumber: string;
+  nationalId: string;
   birthDate: string;
   phone: string;
-  doctorName: string;
-  treatmentType: string;
-  treatmentTypeValue: string;
-  note: string;
+  notes: string | null;
+  noShowCount: number;
+  isBlacklisted: boolean;
+  appointmentCount: number;
 }
 
-// 患者資料類型
+// 患者資料類型（Modal使用）
 interface PatientData {
   id: string;
   name: string;
@@ -42,74 +42,55 @@ export default function PatientsPage() {
   // 載入狀態
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Modal 狀態
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<PatientData | null>(null);
 
   // 載入患者列表
-  // TODO: 目前 API 沒有提供患者列表端點，暫時使用預約列表中的患者資料
-  useEffect(() => {
-    const fetchPatients = async () => {
-      setLoading(true);
-      try {
-        // 從預約資料中提取患者資訊
-        const response = await fetch('/api/admin/appointments?limit=100');
-        const result = await response.json();
+  const fetchPatients = useCallback(async (search?: string) => {
+    setLoading(true);
+    try {
+      const url = search
+        ? `/api/admin/patients?search=${encodeURIComponent(search)}`
+        : '/api/admin/patients';
+      const response = await fetch(url);
+      const result = await response.json();
 
-        if (result.success && result.data?.items) {
-          // 使用 Map 來去重患者
-          const patientMap = new Map<string, Patient>();
-
-          result.data.items.forEach((item: {
-            patientName: string;
-            patientPhone?: string;
-            treatmentType: string;
-            doctor: string;
-          }) => {
-            const key = item.patientName + (item.patientPhone || '');
-            if (!patientMap.has(key)) {
-              patientMap.set(key, {
-                id: key,
-                name: item.patientName,
-                idNumber: '',
-                birthDate: '',
-                phone: item.patientPhone || '',
-                doctorName: item.doctor,
-                treatmentType: item.treatmentType,
-                treatmentTypeValue: item.treatmentType === '內科' ? 'internal' : item.treatmentType === '初診' ? 'first_visit' : 'acupuncture',
-                note: '',
-              });
-            }
-          });
-
-          setPatients(Array.from(patientMap.values()));
-        } else {
-          setPatients([]);
-        }
-        setError(null);
-      } catch (err) {
-        console.error('載入患者列表失敗:', err);
-        setError('載入患者列表失敗');
+      if (result.success && result.data?.items) {
+        setPatients(result.data.items);
+      } else {
         setPatients([]);
-      } finally {
-        setLoading(false);
+        if (!result.success) {
+          setError(result.error?.message || '載入患者列表失敗');
+        }
       }
-    };
-
-    fetchPatients();
+      setError(null);
+    } catch (err) {
+      console.error('載入患者列表失敗:', err);
+      setError(err instanceof Error ? err.message : '載入患者列表失敗');
+      setPatients([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // 篩選患者
-  const filteredPatients = patients.filter((patient) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      patient.name.toLowerCase().includes(query) ||
-      patient.idNumber.toLowerCase().includes(query) ||
-      patient.phone.includes(query)
-    );
-  });
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
+
+  // 搜尋（防抖）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery) {
+        fetchPatients(searchQuery);
+      } else {
+        fetchPatients();
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, fetchPatients]);
 
   // 編輯患者
   const handleEditPatient = (patient: Patient) => {
@@ -117,40 +98,51 @@ export default function PatientsPage() {
       id: patient.id,
       name: patient.name,
       phone: patient.phone,
-      idNumber: patient.idNumber,
+      idNumber: patient.nationalId,
       birthDate: patient.birthDate,
-      doctorId: '1', // 預設王醫師
-      treatmentType: patient.treatmentTypeValue,
-      note: patient.note,
+      doctorId: '1',
+      treatmentType: 'internal',
+      note: patient.notes || '',
     });
     setIsEditModalOpen(true);
   };
 
   // 儲存患者資料
   const handleSavePatient = async (data: PatientData) => {
-    // TODO: 呼叫 API 更新患者資料
-    setPatients((prev) =>
-      prev.map((p) =>
-        p.id === data.id
-          ? {
-              ...p,
-              name: data.name,
-              phone: data.phone,
-              idNumber: data.idNumber,
-              birthDate: data.birthDate,
-              treatmentTypeValue: data.treatmentType,
-              treatmentType: data.treatmentType === 'internal' ? '內科' : data.treatmentType === 'first_visit' ? '初診' : '針灸',
-              note: data.note,
-            }
-          : p
-      )
-    );
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/patients/${data.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          phone: data.phone,
+          nationalId: data.idNumber,
+          birthDate: data.birthDate,
+          notes: data.note || null,
+        }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        // 重新載入列表
+        await fetchPatients(searchQuery || undefined);
+      } else {
+        setError(result.error?.message || '儲存失敗');
+      }
+    } catch (err) {
+      console.error('儲存患者資料失敗:', err);
+      setError(err instanceof Error ? err.message : '儲存患者資料失敗');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // 刪除患者
+  // 刪除患者（目前API不支援，先顯示提示）
   const handleDeletePatient = async (id: string) => {
-    // TODO: 呼叫 API 刪除患者
-    setPatients((prev) => prev.filter((p) => p.id !== id));
+    setError('刪除功能尚未實作');
+    console.log('嘗試刪除患者:', id);
   };
 
   return (
@@ -196,7 +188,7 @@ export default function PatientsPage() {
               <tr className="border-b border-neutral-200 bg-neutral-50">
                 <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">患者名字</th>
                 <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">基本資料</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">預約醫師/ 項目</th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">預約次數</th>
                 <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">備註</th>
                 <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">操作</th>
               </tr>
@@ -208,25 +200,30 @@ export default function PatientsPage() {
                     載入中...
                   </td>
                 </tr>
-              ) : filteredPatients.length === 0 ? (
+              ) : patients.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-neutral-500">
                     {searchQuery ? '找不到符合的患者' : '目前沒有患者資料'}
                   </td>
                 </tr>
               ) : (
-                filteredPatients.map((patient) => (
+                patients.map((patient) => (
                   <tr
                     key={patient.id}
                     className="border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50 transition-colors"
                     onClick={() => router.push(`/admin/patients/${patient.id}`)}
                   >
                     <td className="px-6 py-5">
-                      <div className="font-medium text-neutral-900">{patient.name}</div>
+                      <div className="font-medium text-neutral-900">
+                        {patient.name}
+                        {patient.isBlacklisted && (
+                          <span className="ml-2 px-2 py-0.5 bg-error/10 text-error text-xs rounded">黑名單</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-5">
-                      {patient.idNumber && (
-                        <div className="text-sm text-neutral-600">ID: {patient.idNumber}</div>
+                      {patient.nationalId && (
+                        <div className="text-sm text-neutral-600">ID: {patient.nationalId}</div>
                       )}
                       {patient.birthDate && (
                         <div className="text-sm text-neutral-600">BD: {patient.birthDate}</div>
@@ -236,11 +233,13 @@ export default function PatientsPage() {
                       )}
                     </td>
                     <td className="px-6 py-5">
-                      <div className="text-neutral-900">{patient.doctorName}</div>
-                      <div className="text-sm text-neutral-600">{patient.treatmentType}</div>
+                      <div className="text-neutral-900">{patient.appointmentCount} 次</div>
+                      {patient.noShowCount > 0 && (
+                        <div className="text-sm text-error">未報到: {patient.noShowCount} 次</div>
+                      )}
                     </td>
                     <td className="px-6 py-5">
-                      <div className="text-sm text-neutral-600">{patient.note}</div>
+                      <div className="text-sm text-neutral-600 max-w-xs truncate">{patient.notes}</div>
                     </td>
                     <td className="px-6 py-5">
                       <button
@@ -249,7 +248,8 @@ export default function PatientsPage() {
                           e.stopPropagation();
                           handleEditPatient(patient);
                         }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
+                        disabled={saving}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-600 disabled:bg-neutral-300 text-white text-sm font-medium rounded-lg transition-colors"
                       >
                         <Pencil className="w-4 h-4" />
                         編輯資料
