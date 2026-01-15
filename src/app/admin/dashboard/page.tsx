@@ -263,10 +263,10 @@ export default function DashboardPage() {
         </div>
 
         {/* 預約列表表格 */}
-        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="bg-white rounded-xl  overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50">
+              <tr className="">
                 <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">
                   看診時間
                 </th>

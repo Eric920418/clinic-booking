@@ -756,7 +756,7 @@ export default function SchedulesPage() {
 
             {/* 右側日曆區 */}
             <div className="flex-1">
-              <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+              <div className="bg-white  border border-neutral-200 overflow-hidden">
                 {viewMode === 'week' ? (
                 <>
                   {/* 週檢視 - 標題（週名+日期） */}

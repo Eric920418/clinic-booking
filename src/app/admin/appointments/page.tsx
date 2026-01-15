@@ -452,10 +452,10 @@ export default function AppointmentsPage() {
         </div>
 
         {/* 預約列表表格 */}
-        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="bg-white rounded-xl  overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50">
+              <tr className="">
                 <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">預約時段</th>
                 <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">預約患者</th>
                 <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">預約醫師/項目</th>
