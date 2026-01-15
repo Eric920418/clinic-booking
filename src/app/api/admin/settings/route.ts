@@ -48,7 +48,7 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
         : [],
     ]);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         doctors,
@@ -56,6 +56,10 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
         accounts,
       },
     });
+
+    // 緩存 30 秒，stale-while-revalidate 60 秒
+    response.headers.set('Cache-Control', 'private, s-maxage=30, stale-while-revalidate=60');
+    return response;
 
   } catch (error) {
     console.error('[GET /api/admin/settings]', error);

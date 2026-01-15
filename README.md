@@ -567,6 +567,31 @@ SWR 預設配置：
 - `dedupingInterval: 5000` - 5 秒內重複請求會被合併
 - `errorRetryCount: 2` - 錯誤重試 2 次
 
+### HTTP Cache Headers
+
+API 路由設置 Cache-Control headers 以減少 Vercel serverless 冷啟動延遲：
+
+| API | Cache 策略 | 說明 |
+|-----|------------|------|
+| `/api/liff/doctors` | `s-maxage=60, stale-while-revalidate=120` | 醫師列表不常變化 |
+| `/api/liff/treatment-types` | `s-maxage=60, stale-while-revalidate=120` | 診療項目不常變化 |
+| `/api/admin/dashboard` | `s-maxage=15, stale-while-revalidate=30` | Dashboard 資料短期緩存 |
+| `/api/admin/settings` | `s-maxage=30, stale-while-revalidate=60` | 設定資料中期緩存 |
+| `/api/admin/appointments` | `s-maxage=10, stale-while-revalidate=30` | 預約資料頻繁變化，短期緩存 |
+
+### 資料庫索引
+
+appointments 表包含以下索引優化查詢效能：
+- `@@index([patientId])` - 病患查詢
+- `@@index([doctorId])` - 醫師篩選
+- `@@index([appointmentDate])` - 日期查詢
+- `@@index([doctorId, appointmentDate])` - 複合索引（醫師+日期）
+- `@@index([status])` - 狀態篩選
+
+### Next.js Link 優化
+
+Admin Layout 中的導航連結已設置 `prefetch={false}`，避免預先載入所有頁面資料。
+
 ## 規格文件
 
 - `clinic-booking-spec.md` - 完整系統規格書

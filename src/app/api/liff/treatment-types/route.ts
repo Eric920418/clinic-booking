@@ -45,7 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: treatmentTypes.map((tt) => ({
         id: tt.id,
@@ -53,6 +53,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         durationMinutes: tt.durationMinutes,
       })),
     });
+
+    // 緩存 60 秒，stale-while-revalidate 120 秒
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    return response;
 
   } catch (error) {
     console.error('[GET /api/liff/treatment-types]', error);

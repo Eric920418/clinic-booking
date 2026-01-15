@@ -112,7 +112,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       status: apt.status,
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         summary: {
@@ -126,6 +126,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         appointments,
       },
     });
+
+    // 短期緩存 15 秒，stale-while-revalidate 30 秒
+    response.headers.set('Cache-Control', 'private, s-maxage=15, stale-while-revalidate=30');
+    return response;
 
   } catch (error) {
     console.error('[GET /api/admin/dashboard]', error);

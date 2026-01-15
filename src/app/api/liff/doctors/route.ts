@@ -67,7 +67,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       orderBy: { name: 'asc' },
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: doctors.map((doctor) => ({
         id: doctor.id,
@@ -76,6 +76,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         treatmentTypes: doctor.doctorTreatments.map((dt) => dt.treatmentType),
       })),
     });
+
+    // 緩存 60 秒，stale-while-revalidate 120 秒
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    return response;
 
   } catch (error) {
     console.error('[GET /api/liff/doctors]', error);

@@ -82,7 +82,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       prisma.appointment.count({ where }),
     ]);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         items: appointments.map((appt) => ({
@@ -105,6 +105,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         },
       },
     });
+
+    // 短期緩存 10 秒，stale-while-revalidate 30 秒（預約資料變化較頻繁）
+    response.headers.set('Cache-Control', 'private, s-maxage=10, stale-while-revalidate=30');
+    return response;
 
   } catch (error) {
     console.error('[GET /api/admin/appointments]', error);

@@ -205,7 +205,9 @@ model Appointment {
   timeSlot      TimeSlot      @relation(fields: [timeSlotId], references: [id], onDelete: Restrict)
 
   @@index([patientId])
+  @@index([doctorId])
   @@index([appointmentDate])
+  @@index([doctorId, appointmentDate])
   @@index([status])
   @@map("appointments")
 }
