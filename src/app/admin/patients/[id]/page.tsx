@@ -172,7 +172,7 @@ export default function PatientHistoryPage() {
         </div>
 
         {/* 歷史記錄表格 */}
-        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="bg-white rounded-xl  overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="">
