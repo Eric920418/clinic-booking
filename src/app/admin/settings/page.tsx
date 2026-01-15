@@ -415,25 +415,25 @@ export default function SettingsPage() {
       <div className="p-8">
         {/* 分頁切換 */}
         <div className="mb-8">
-          <div className="inline-flex bg-neutral-100 rounded-lg p-1">
+          <div className="inline-flex bg-[#E7E7E7] rounded-lg px-[4px] py-[6.5px]">
             <button
               type="button"
-              onClick={() => setActiveTab('accounts')}
+              onClick={() => setActiveTab("accounts")}
               className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'accounts'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                activeTab === "accounts"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-neutral-600 hover:text-neutral-900"
               }`}
             >
               帳號權限管理
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('resources')}
+              onClick={() => setActiveTab("resources")}
               className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'resources'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                activeTab === "resources"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-neutral-600 hover:text-neutral-900"
               }`}
             >
               診療資源管理
@@ -442,17 +442,21 @@ export default function SettingsPage() {
         </div>
 
         {/* 診療資源管理內容 */}
-        {activeTab === 'resources' && (
+        {activeTab === "resources" && (
           <div className="space-y-10">
             {/* 醫師資源管理 */}
             <section>
-              <h2 className="text-base font-bold text-neutral-900 mb-4">醫師資源管理</h2>
+              <h2 className="text-base font-bold text-neutral-900 mb-4">
+                醫師資源管理
+              </h2>
 
               {/* 新增醫師表單 */}
               <div className="flex items-end gap-4 mb-6">
                 {/* 醫師名稱 */}
                 <div className="w-56">
-                  <label className="text-sm text-neutral-500 mb-1 block">醫師名稱</label>
+                  <label className="text-sm text-neutral-500 mb-1 block">
+                    醫師名稱
+                  </label>
                   <input
                     type="text"
                     value={doctorName}
@@ -481,24 +485,30 @@ export default function SettingsPage() {
                     <span className="text-neutral-700">
                       {selectedTreatments.length > 0
                         ? `已選 ${selectedTreatments.length} 項`
-                        : '全部項目'}
+                        : "全部項目"}
                     </span>
                     <ChevronDown className="w-5 h-5 text-neutral-400" />
                   </button>
                   {showTreatmentDropdown && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-10">
                       {treatmentOptions.map((option) => {
-                        const isSelected = selectedTreatments.includes(option.value);
+                        const isSelected = selectedTreatments.includes(
+                          option.value
+                        );
                         return (
                           <button
                             key={option.value}
                             type="button"
-                            onClick={() => toggleTreatmentSelection(option.value)}
+                            onClick={() =>
+                              toggleTreatmentSelection(option.value)
+                            }
                             className="w-full px-3 py-2 flex items-center gap-2 text-sm hover:bg-neutral-50"
                           >
                             <div
                               className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                                isSelected ? 'border-primary bg-primary' : 'border-neutral-300'
+                                isSelected
+                                  ? "border-primary bg-primary"
+                                  : "border-neutral-300"
                               }`}
                             >
                               {isSelected && (
@@ -519,7 +529,9 @@ export default function SettingsPage() {
                             </div>
                             <span
                               className={
-                                isSelected ? 'text-primary font-medium' : 'text-neutral-700'
+                                isSelected
+                                  ? "text-primary font-medium"
+                                  : "text-neutral-700"
                               }
                             >
                               {option.label}
@@ -533,7 +545,9 @@ export default function SettingsPage() {
 
                 {/* 單一時段分鐘設定 */}
                 <div className="w-40 relative">
-                  <label className="text-sm text-neutral-500 mb-1 block">單一時段分鐘設定</label>
+                  <label className="text-sm text-neutral-500 mb-1 block">
+                    單一時段分鐘設定
+                  </label>
                   <button
                     type="button"
                     onClick={() => {
@@ -561,7 +575,9 @@ export default function SettingsPage() {
                           >
                             <div
                               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                isSelected ? 'border-primary' : 'border-neutral-300'
+                                isSelected
+                                  ? "border-primary"
+                                  : "border-neutral-300"
                               }`}
                             >
                               {isSelected && (
@@ -570,7 +586,9 @@ export default function SettingsPage() {
                             </div>
                             <span
                               className={
-                                isSelected ? 'text-primary font-medium' : 'text-neutral-700'
+                                isSelected
+                                  ? "text-primary font-medium"
+                                  : "text-neutral-700"
                               }
                             >
                               {minutes}
@@ -600,7 +618,9 @@ export default function SettingsPage() {
                     className="bg-white border border-neutral-200 rounded-xl px-4 py-3 min-w-[140px]"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-neutral-900">{doctor.name}</span>
+                      <span className="font-medium text-neutral-900">
+                        {doctor.name}
+                      </span>
                       <button
                         type="button"
                         onClick={() => handleDeleteDoctor(doctor.id)}
@@ -611,10 +631,7 @@ export default function SettingsPage() {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {doctor.treatments.map((treatment, idx) => (
-                        <span
-                          key={idx}
-                          className="text-xs text-neutral-500"
-                        >
+                        <span key={idx} className="text-xs text-neutral-500">
                           {treatment}
                         </span>
                       ))}
@@ -626,13 +643,17 @@ export default function SettingsPage() {
 
             {/* 新增診療項目 */}
             <section>
-              <h2 className="text-base font-bold text-neutral-900 mb-4">新增診療項目</h2>
+              <h2 className="text-base font-bold text-neutral-900 mb-4">
+                新增診療項目
+              </h2>
 
               {/* 新增診療項目表單 */}
               <div className="flex items-end gap-4 mb-6">
                 {/* 診科項目名稱 */}
                 <div className="w-56">
-                  <label className="text-sm text-neutral-500 mb-1 block">診科項目名稱</label>
+                  <label className="text-sm text-neutral-500 mb-1 block">
+                    診科項目名稱
+                  </label>
                   <input
                     type="text"
                     value={treatmentName}
@@ -644,11 +665,15 @@ export default function SettingsPage() {
 
                 {/* 診科扣點設定 */}
                 <div className="w-40 relative">
-                  <label className="text-sm text-neutral-500 mb-1 block">診科扣點設定</label>
+                  <label className="text-sm text-neutral-500 mb-1 block">
+                    診科扣點設定
+                  </label>
                   <button
                     type="button"
                     onClick={() => {
-                      setShowTreatmentMinutesDropdown(!showTreatmentMinutesDropdown);
+                      setShowTreatmentMinutesDropdown(
+                        !showTreatmentMinutesDropdown
+                      );
                       setShowTreatmentDropdown(false);
                       setShowDoctorMinutesDropdown(false);
                     }}
@@ -673,7 +698,9 @@ export default function SettingsPage() {
                           >
                             <div
                               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                isSelected ? 'border-primary' : 'border-neutral-300'
+                                isSelected
+                                  ? "border-primary"
+                                  : "border-neutral-300"
                               }`}
                             >
                               {isSelected && (
@@ -682,7 +709,9 @@ export default function SettingsPage() {
                             </div>
                             <span
                               className={
-                                isSelected ? 'text-primary font-medium' : 'text-neutral-700'
+                                isSelected
+                                  ? "text-primary font-medium"
+                                  : "text-neutral-700"
                               }
                             >
                               {minutes}
@@ -727,7 +756,9 @@ export default function SettingsPage() {
                         className="border-b border-neutral-100 last:border-0"
                       >
                         <td className="px-6 py-4">
-                          <span className="text-neutral-900">{treatment.name}</span>
+                          <span className="text-neutral-900">
+                            {treatment.name}
+                          </span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="inline-flex px-3 py-1 text-sm text-primary border border-primary rounded-full">
@@ -754,17 +785,21 @@ export default function SettingsPage() {
         )}
 
         {/* 帳號權限管理內容 */}
-        {activeTab === 'accounts' && (
+        {activeTab === "accounts" && (
           <div className="space-y-10">
             {/* 新增帳號 */}
             <section>
-              <h2 className="text-base font-bold text-neutral-900 mb-4">新增帳號</h2>
+              <h2 className="text-base font-bold text-neutral-900 mb-4">
+                新增帳號
+              </h2>
 
               {/* 新增帳號表單 */}
               <div className="flex items-end gap-4">
                 {/* 帳戶名稱 */}
                 <div className="w-56">
-                  <label className="text-sm text-neutral-500 mb-1 block">帳戶名稱</label>
+                  <label className="text-sm text-neutral-500 mb-1 block">
+                    帳戶名稱
+                  </label>
                   <input
                     type="text"
                     value={accountUsername}
@@ -775,7 +810,9 @@ export default function SettingsPage() {
 
                 {/* 密碼設定 */}
                 <div className="w-56">
-                  <label className="text-sm text-neutral-500 mb-1 block">密碼設定</label>
+                  <label className="text-sm text-neutral-500 mb-1 block">
+                    密碼設定
+                  </label>
                   <input
                     type="password"
                     value={accountPassword}
@@ -786,13 +823,17 @@ export default function SettingsPage() {
 
                 {/* 權限設定 */}
                 <div className="w-40 relative">
-                  <label className="text-sm text-neutral-500 mb-1 block">權限設定</label>
+                  <label className="text-sm text-neutral-500 mb-1 block">
+                    權限設定
+                  </label>
                   <button
                     type="button"
                     onClick={() => setShowRoleDropdown(!showRoleDropdown)}
                     className="w-full h-11 px-3 bg-neutral-100 border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
-                    <span className="text-neutral-700">{getRoleLabel(accountRole)}</span>
+                    <span className="text-neutral-700">
+                      {getRoleLabel(accountRole)}
+                    </span>
                     <ChevronDown className="w-5 h-5 text-neutral-400" />
                   </button>
                   {showRoleDropdown && (
@@ -811,7 +852,9 @@ export default function SettingsPage() {
                           >
                             <div
                               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                isSelected ? 'border-primary' : 'border-neutral-300'
+                                isSelected
+                                  ? "border-primary"
+                                  : "border-neutral-300"
                               }`}
                             >
                               {isSelected && (
@@ -820,7 +863,9 @@ export default function SettingsPage() {
                             </div>
                             <span
                               className={
-                                isSelected ? 'text-primary font-medium' : 'text-neutral-700'
+                                isSelected
+                                  ? "text-primary font-medium"
+                                  : "text-neutral-700"
                               }
                             >
                               {option.label}
@@ -845,7 +890,9 @@ export default function SettingsPage() {
 
             {/* 用戶管理 */}
             <section>
-              <h2 className="text-base font-bold text-neutral-900 mb-4">用戶管理</h2>
+              <h2 className="text-base font-bold text-neutral-900 mb-4">
+                用戶管理
+              </h2>
 
               {/* 帳號卡片列表 */}
               <div className="flex flex-wrap gap-4">
@@ -856,15 +903,21 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="font-medium text-neutral-900">{account.username}</div>
-                        <div className="text-sm text-neutral-500">{getRoleLabel(account.role)}</div>
+                        <div className="font-medium text-neutral-900">
+                          {account.username}
+                        </div>
+                        <div className="text-sm text-neutral-500">
+                          {getRoleLabel(account.role)}
+                        </div>
                       </div>
                       <div className="relative">
                         <button
                           type="button"
                           onClick={() =>
                             setActiveAccountMenu(
-                              activeAccountMenu === account.id ? null : account.id
+                              activeAccountMenu === account.id
+                                ? null
+                                : account.id
                             )
                           }
                           className="p-1 hover:bg-neutral-100 rounded transition-colors"
@@ -939,7 +992,7 @@ export default function SettingsPage() {
         isOpen={isAddAppointmentModalOpen}
         onClose={() => setIsAddAppointmentModalOpen(false)}
         onConfirm={(data) => {
-          console.log('新增預約:', data);
+          console.log("新增預約:", data);
           // TODO: 實際新增預約邏輯
         }}
       />

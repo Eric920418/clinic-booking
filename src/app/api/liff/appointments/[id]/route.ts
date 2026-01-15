@@ -52,8 +52,8 @@ export async function GET(
       data: {
         id: appointment.id,
         appointmentDate: format(appointment.appointmentDate, 'yyyy-MM-dd'),
-        startTime: format(appointment.timeSlot.startTime, 'HH:mm'),
-        endTime: format(appointment.timeSlot.endTime, 'HH:mm'),
+        startTime: format(addHours(appointment.timeSlot.startTime, 8), 'HH:mm'),
+        endTime: format(addHours(appointment.timeSlot.endTime, 8), 'HH:mm'),
         doctor: {
           id: appointment.doctor.id,
           name: appointment.doctor.name,
@@ -146,7 +146,7 @@ export async function PUT(
     // 規則：時段開始前 3 小時內不可修改預約
     // 對應規格：spec/features/病患修改預約.feature - 時段開始前 3 小時內不可修改預約
     const appointmentDateTime = new Date(existingAppointment.timeSlot.schedule.date);
-    const [hours, minutes] = format(existingAppointment.timeSlot.startTime, 'HH:mm').split(':').map(Number);
+    const [hours, minutes] = format(addHours(existingAppointment.timeSlot.startTime, 8), 'HH:mm').split(':').map(Number);
     appointmentDateTime.setHours(hours, minutes, 0, 0);
     
     const threeHoursBefore = addHours(appointmentDateTime, -3);
@@ -273,7 +273,7 @@ export async function PUT(
       await sendAppointmentModification(
         updatedAppointment.patient.lineUserId,
         format(updatedAppointment.appointmentDate, 'yyyy-MM-dd'),
-        format(updatedAppointment.timeSlot.startTime, 'HH:mm')
+        format(addHours(updatedAppointment.timeSlot.startTime, 8), 'HH:mm')
       );
     }
 
@@ -282,8 +282,8 @@ export async function PUT(
       data: {
         id: updatedAppointment.id,
         appointmentDate: format(updatedAppointment.appointmentDate, 'yyyy-MM-dd'),
-        startTime: format(updatedAppointment.timeSlot.startTime, 'HH:mm'),
-        endTime: format(updatedAppointment.timeSlot.endTime, 'HH:mm'),
+        startTime: format(addHours(updatedAppointment.timeSlot.startTime, 8), 'HH:mm'),
+        endTime: format(addHours(updatedAppointment.timeSlot.endTime, 8), 'HH:mm'),
         doctor: updatedAppointment.doctor.name,
         treatmentType: updatedAppointment.treatmentType.name,
         status: updatedAppointment.status,

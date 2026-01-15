@@ -11,7 +11,7 @@ import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { ERROR_CODES, type ApiResponse } from '@/types';
 import { sendAppointmentConfirmation } from '@/lib/line';
-import { format, startOfDay, endOfDay, parseISO } from 'date-fns';
+import { format, startOfDay, endOfDay, parseISO, addHours } from 'date-fns';
 import { Prisma } from '@prisma/client';
 
 // =============================================
@@ -105,8 +105,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
           patientName: appt.patient.name,
           patientPhone: appt.patient.phone,
           appointmentDate: format(appt.appointmentDate, 'yyyy-MM-dd'),
-          startTime: format(appt.timeSlot.startTime, 'HH:mm'),
-          endTime: format(appt.timeSlot.endTime, 'HH:mm'),
+          startTime: format(addHours(appt.timeSlot.startTime, 8), 'HH:mm'),
+          endTime: format(addHours(appt.timeSlot.endTime, 8), 'HH:mm'),
           doctor: appt.doctor.name,
           treatmentType: appt.treatmentType.name,
           status: appt.status,
@@ -296,7 +296,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       await sendAppointmentConfirmation(
         appointment.patient.lineUserId,
         format(appointment.appointmentDate, 'yyyy-MM-dd'),
-        format(appointment.timeSlot.startTime, 'HH:mm'),
+        format(addHours(appointment.timeSlot.startTime, 8), 'HH:mm'),
         appointment.doctor.name,
         appointment.treatmentType.name
       );

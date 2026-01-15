@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { type ApiResponse } from '@/types';
-import { startOfDay, endOfDay, format } from 'date-fns';
+import { startOfDay, endOfDay, format, addHours } from 'date-fns';
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -114,8 +114,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       treatmentType: apt.treatmentType.name,
       treatmentTypeId: apt.treatmentTypeId,
       appointmentDate: format(apt.appointmentDate, 'yyyy-MM-dd'),
-      startTime: apt.timeSlot.startTime ? format(apt.timeSlot.startTime, 'HH:mm') : '',
-      endTime: apt.timeSlot.endTime ? format(apt.timeSlot.endTime, 'HH:mm') : '',
+      startTime: apt.timeSlot.startTime ? format(addHours(apt.timeSlot.startTime, 8), 'HH:mm') : '',
+      endTime: apt.timeSlot.endTime ? format(addHours(apt.timeSlot.endTime, 8), 'HH:mm') : '',
       status: apt.status,
     }));
 

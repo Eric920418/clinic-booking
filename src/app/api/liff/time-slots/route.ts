@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { type ApiResponse } from '@/types';
-import { startOfDay, format } from 'date-fns';
+import { startOfDay, format, addHours } from 'date-fns';
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -52,8 +52,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       success: true,
       data: schedule.timeSlots.map((slot) => ({
         id: slot.id,
-        startTime: format(slot.startTime, 'HH:mm'),
-        endTime: format(slot.endTime, 'HH:mm'),
+        startTime: format(addHours(slot.startTime, 8), 'HH:mm'),
+        endTime: format(addHours(slot.endTime, 8), 'HH:mm'),
         totalMinutes: slot.totalMinutes,
         remainingMinutes: slot.remainingMinutes,
         // 規則：剩餘分鐘數不足時，該時段不可選

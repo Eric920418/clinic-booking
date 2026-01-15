@@ -11,7 +11,7 @@ import prisma from '@/lib/prisma';
 import { ERROR_CODES, type ApiResponse } from '@/types';
 import { sendAppointmentConfirmation } from '@/lib/line';
 import { validateTaiwanNationalId } from '@/lib/validations/patient';
-import { format, startOfDay } from 'date-fns';
+import { format, startOfDay, addHours } from 'date-fns';
 import { Prisma } from '@prisma/client';
 
 // =============================================
@@ -65,8 +65,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       data: appointments.map((appt) => ({
         id: appt.id,
         appointmentDate: format(appt.appointmentDate, 'yyyy-MM-dd'),
-        startTime: format(appt.timeSlot.startTime, 'HH:mm'),
-        endTime: format(appt.timeSlot.endTime, 'HH:mm'),
+        startTime: format(addHours(appt.timeSlot.startTime, 8), 'HH:mm'),
+        endTime: format(addHours(appt.timeSlot.endTime, 8), 'HH:mm'),
         doctor: appt.doctor.name,
         treatmentType: appt.treatmentType.name,
         status: appt.status,
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         await sendAppointmentConfirmation(
           patient.lineUserId,
           format(appointment.appointmentDate, 'yyyy-MM-dd'),
-          format(appointment.timeSlot.startTime, 'HH:mm'),
+          format(addHours(appointment.timeSlot.startTime, 8), 'HH:mm'),
           appointment.doctor.name,
           appointment.treatmentType.name
         );
@@ -279,8 +279,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         data: {
           id: appointment.id,
           appointmentDate: format(appointment.appointmentDate, 'yyyy-MM-dd'),
-          startTime: format(appointment.timeSlot.startTime, 'HH:mm'),
-          endTime: format(appointment.timeSlot.endTime, 'HH:mm'),
+          startTime: format(addHours(appointment.timeSlot.startTime, 8), 'HH:mm'),
+          endTime: format(addHours(appointment.timeSlot.endTime, 8), 'HH:mm'),
           doctor: appointment.doctor.name,
           treatmentType: appointment.treatmentType.name,
           status: appointment.status,
