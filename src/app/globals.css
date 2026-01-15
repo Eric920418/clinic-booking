@@ -189,7 +189,6 @@ select {
   background-color: #F5F5F5;
   border: 1px solid #888888;
   border-radius: 0.5rem;
-  padding: 0.625rem 0.875rem;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
