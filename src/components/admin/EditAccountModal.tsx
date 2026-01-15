@@ -147,7 +147,7 @@ export default function EditAccountModal({
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full h-12 px-3 pr-10 bg-white border border-neutral-300 rounded-lg text-base focus:outline-none focus:border-primary"
+                  className="w-full h-12 px-3 pr-10 bg-[#F5F5F5] border border-[#888888] rounded-lg text-base focus:outline-none focus:border-primary"
                 />
                 <button
                   type="button"
@@ -171,7 +171,7 @@ export default function EditAccountModal({
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full h-12 px-3 pr-10 bg-white border border-neutral-300 rounded-lg text-base focus:outline-none focus:border-primary"
+                  className="w-full h-12 px-3 pr-10 bg-[#F5F5F5] border border-[#888888] rounded-lg text-base focus:outline-none focus:border-primary"
                 />
                 <button
                   type="button"
@@ -197,7 +197,7 @@ export default function EditAccountModal({
             <button
               type="button"
               onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-              className="w-full h-12 px-3 bg-white border border-neutral-300 rounded-lg text-base text-left flex items-center justify-between focus:outline-none focus:border-primary"
+              className="w-full h-12 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-base text-left flex items-center justify-between focus:outline-none focus:border-primary"
             >
               <span className="text-neutral-900">{getRoleLabel(formData.role)}</span>
               <ChevronDown className="w-5 h-5 text-neutral-400" />

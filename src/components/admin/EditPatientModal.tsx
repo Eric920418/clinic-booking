@@ -117,7 +117,7 @@ export default function EditPatientModal({
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                className="w-full h-11 px-3 bg-neutral-100 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
               />
             </div>
             <div>
@@ -126,7 +126,7 @@ export default function EditPatientModal({
                 type="text"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
               />
             </div>
           </div>
@@ -139,7 +139,7 @@ export default function EditPatientModal({
                 type="text"
                 value={formData.idNumber}
                 onChange={(e) => handleInputChange('idNumber', e.target.value.toUpperCase())}
-                className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
               />
             </div>
             <div>
@@ -150,7 +150,7 @@ export default function EditPatientModal({
                   value={formData.birthDate}
                   onChange={(e) => handleInputChange('birthDate', e.target.value)}
                   placeholder="000-00-00"
-                  className="w-full h-11 px-3 pr-10 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                  className="w-full h-11 px-3 pr-10 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                 />
                 <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
               </div>
@@ -167,7 +167,7 @@ export default function EditPatientModal({
                   setShowDoctorDropdown(!showDoctorDropdown);
                   setShowTreatmentDropdown(false);
                 }}
-                className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
               >
                 <span>{selectedDoctor?.name || '請選擇'}</span>
                 <ChevronDown className="w-5 h-5 text-neutral-400" />
@@ -206,7 +206,7 @@ export default function EditPatientModal({
                   setShowTreatmentDropdown(!showTreatmentDropdown);
                   setShowDoctorDropdown(false);
                 }}
-                className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
               >
                 <span>{selectedTreatment?.label || '請選擇'}</span>
                 <ChevronDown className="w-5 h-5 text-neutral-400" />
@@ -246,7 +246,7 @@ export default function EditPatientModal({
               value={formData.note}
               onChange={(e) => handleInputChange('note', e.target.value)}
               rows={4}
-              className="w-full px-3 py-3 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary resize-none"
+              className="w-full px-3 py-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary resize-none"
             />
           </div>
         </div>

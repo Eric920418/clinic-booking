@@ -146,15 +146,8 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen">
       {/* 頂部標題列 */}
-      <header className="bg-white border-b border-neutral-200 px-8 py-4 flex items-center justify-between">
+      <header className="bg-white  px-8 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-neutral-900">數據概覽</h1>
-        <button
-          type="button"
-          onClick={handleNewAppointment}
-          className="h-10 px-5 bg-primary hover:bg-primary-600 text-white font-medium text-sm rounded-lg transition-colors"
-        >
-          新增預約
-        </button>
       </header>
 
       {/* 主內容 */}
@@ -181,7 +174,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setShowDoctorDropdown(!showDoctorDropdown)}
-                className="w-40 h-10 px-3 bg-white border border-neutral-300 rounded-lg flex items-center justify-between text-sm"
+                className="w-40 h-10 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg flex items-center justify-between text-sm"
               >
                 <span>{selectedDoctor?.name || "選擇醫師"}</span>
                 <ChevronDown className="w-4 h-4 text-neutral-400" />

@@ -400,15 +400,8 @@ export default function SettingsPage() {
       )}
 
       {/* 頂部標題列 */}
-      <header className="bg-white border-b border-neutral-200 px-8 py-4 flex items-center justify-between">
+      <header className="bg-white  px-8 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-neutral-900">系統設定</h1>
-        <button
-          type="button"
-          onClick={() => setIsAddAppointmentModalOpen(true)}
-          className="h-10 px-5 bg-primary hover:bg-primary-600 text-white font-medium text-sm rounded-lg transition-colors"
-        >
-          新增預約
-        </button>
       </header>
 
       {/* 主內容 */}
@@ -462,7 +455,7 @@ export default function SettingsPage() {
                     value={doctorName}
                     onChange={(e) => setDoctorName(e.target.value)}
                     placeholder="例：王醫師"
-                    className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                   />
                 </div>
 
@@ -480,7 +473,7 @@ export default function SettingsPage() {
                       setShowTreatmentDropdown(!showTreatmentDropdown);
                       setShowDoctorMinutesDropdown(false);
                     }}
-                    className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
                     <span className="text-neutral-700">
                       {selectedTreatments.length > 0
@@ -554,7 +547,7 @@ export default function SettingsPage() {
                       setShowDoctorMinutesDropdown(!showDoctorMinutesDropdown);
                       setShowTreatmentDropdown(false);
                     }}
-                    className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
                     <span className="text-neutral-700">{doctorMinutes}</span>
                     <ChevronDown className="w-5 h-5 text-neutral-400" />
@@ -659,7 +652,7 @@ export default function SettingsPage() {
                     value={treatmentName}
                     onChange={(e) => setTreatmentName(e.target.value)}
                     placeholder="例：初診、針灸、拔罐"
-                    className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                   />
                 </div>
 
@@ -677,7 +670,7 @@ export default function SettingsPage() {
                       setShowTreatmentDropdown(false);
                       setShowDoctorMinutesDropdown(false);
                     }}
-                    className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
                     <span className="text-neutral-700">{treatmentMinutes}</span>
                     <ChevronDown className="w-5 h-5 text-neutral-400" />

@@ -412,14 +412,8 @@ export default function SchedulesPage() {
   return (
     <div className="min-h-screen">
       {/* 頂部標題列 */}
-      <header className="bg-white border-b border-neutral-200 px-8 py-4 flex items-center justify-between">
+      <header className="bg-white  px-8 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-neutral-900">診次排班</h1>
-        <button
-          type="button"
-          className="h-10 px-5 bg-primary hover:bg-primary-600 text-white font-medium text-sm rounded-lg transition-colors"
-        >
-          新增預約
-        </button>
       </header>
 
       {/* 主內容區 */}
@@ -521,7 +515,7 @@ export default function SchedulesPage() {
                 <button
                   type="button"
                   onClick={() => setShowDoctorDropdown(!showDoctorDropdown)}
-                  className="w-full h-10 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                  className="w-full h-10 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                 >
                   <span className="text-neutral-700">
                     {selectedDoctorIds.length === 0 || selectedDoctorIds.length === doctors.length
@@ -637,7 +631,7 @@ export default function SchedulesPage() {
                       setShowDoctorDropdown(!showDoctorDropdown);
                       setShowTimeSlotDropdown(false);
                     }}
-                    className="w-full h-10 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                    className="w-full h-10 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
                     <span className="text-neutral-700">
                       {selectedDoctorIds.length === 0
@@ -711,7 +705,7 @@ export default function SchedulesPage() {
                       setShowTimeSlotDropdown(!showTimeSlotDropdown);
                       setShowDoctorDropdown(false);
                     }}
-                    className="w-full h-10 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                    className="w-full h-10 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
                     <span className="text-neutral-700">{selectedTimeSlotLabel}</span>
                     <ChevronDown className="w-5 h-5 text-neutral-400" />
@@ -925,7 +919,7 @@ export default function SchedulesPage() {
                 <select
                   value={addScheduleDoctorId}
                   onChange={(e) => setAddScheduleDoctorId(e.target.value)}
-                  className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                  className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                 >
                   <option value="">請選擇醫師</option>
                   {doctors.map((doctor) => (

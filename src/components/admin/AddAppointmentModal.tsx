@@ -286,7 +286,7 @@ export default function AddAppointmentModal({
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="輸入驗證碼"
-                      className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-primary"
+                      className="w-full h-11 pl-10 pr-4 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
@@ -340,7 +340,7 @@ export default function AddAppointmentModal({
                         setShowDoctorDropdown(!showDoctorDropdown);
                         setShowTimeDropdown(false);
                       }}
-                      className="w-full h-11 px-3 bg-white border border-neutral-300 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                      className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                     >
                       <span className={selectedDoctor ? 'text-neutral-900' : 'text-neutral-400'}>
                         {selectedDoctor ? getDoctorName(selectedDoctor) : '選擇醫師'}
@@ -375,7 +375,7 @@ export default function AddAppointmentModal({
                         value={appointmentDate}
                         onChange={(e) => setAppointmentDate(e.target.value)}
                         placeholder="07/01/115"
-                        className="w-full h-11 px-3 pr-10 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-primary"
+                        className="w-full h-11 px-3 pr-10 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                       />
                       <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                     </div>
@@ -412,7 +412,7 @@ export default function AddAppointmentModal({
                       setShowTimeDropdown(!showTimeDropdown);
                       setShowDoctorDropdown(false);
                     }}
-                    className="w-full h-11 px-3 bg-white border border-neutral-300 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
                     <span className={selectedTime ? 'text-neutral-900' : 'text-neutral-400'}>
                       {selectedTime || '選擇時間'}

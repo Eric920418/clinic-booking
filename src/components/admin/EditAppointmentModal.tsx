@@ -136,7 +136,7 @@ export default function EditAppointmentModal({
                   value={formData.date}
                   onChange={(e) => handleInputChange('date', e.target.value)}
                   placeholder="000-00-00"
-                  className="w-full h-11 px-3 pr-10 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                  className="w-full h-11 px-3 pr-10 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                 />
                 <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
               </div>
@@ -146,7 +146,7 @@ export default function EditAppointmentModal({
               <button
                 type="button"
                 onClick={() => setOpenDropdown(openDropdown === 'time' ? null : 'time')}
-                className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
               >
                 <span>{formData.time}</span>
                 <ChevronDown className="w-5 h-5 text-neutral-400" />
@@ -183,7 +183,7 @@ export default function EditAppointmentModal({
               <button
                 type="button"
                 onClick={() => setOpenDropdown(openDropdown === 'doctor' ? null : 'doctor')}
-                className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
               >
                 <span>{selectedDoctor?.name || '請選擇'}</span>
                 <ChevronDown className="w-5 h-5 text-neutral-400" />
@@ -216,7 +216,7 @@ export default function EditAppointmentModal({
               <button
                 type="button"
                 onClick={() => setOpenDropdown(openDropdown === 'treatment' ? null : 'treatment')}
-                className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
               >
                 <span>{selectedTreatment?.label || '請選擇'}</span>
                 <ChevronDown className="w-5 h-5 text-neutral-400" />
@@ -252,7 +252,7 @@ export default function EditAppointmentModal({
             <button
               type="button"
               onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
-              className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+              className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
             >
               <span>{selectedStatus?.label || '請選擇'}</span>
               <ChevronDown className="w-5 h-5 text-neutral-400" />
@@ -288,7 +288,7 @@ export default function EditAppointmentModal({
               value={formData.note}
               onChange={(e) => handleInputChange('note', e.target.value)}
               rows={4}
-              className="w-full px-3 py-3 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary resize-none"
+              className="w-full px-3 py-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary resize-none"
             />
           </div>
         </div>

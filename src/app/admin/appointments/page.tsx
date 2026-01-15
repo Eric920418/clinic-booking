@@ -119,7 +119,7 @@ function MultiSelectDropdown({
       <button
         type="button"
         onClick={onToggle}
-        className="w-36 h-10 px-3 bg-white border border-neutral-300 rounded-lg flex items-center justify-between text-sm"
+        className="w-36 h-10 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg flex items-center justify-between text-sm"
       >
         <span className="truncate">{displayText}</span>
         <ChevronDown className="w-4 h-4 text-neutral-400 flex-shrink-0" />
@@ -374,15 +374,9 @@ export default function AppointmentsPage() {
   return (
     <div className="min-h-screen">
       {/* 頂部標題列 */}
-      <header className="bg-white border-b border-neutral-200 px-8 py-4 flex items-center justify-between">
+      <header className="bg-white  px-8 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-neutral-900">預約排程</h1>
-        <button
-          type="button"
-          onClick={handleNewAppointment}
-          className="h-10 px-5 bg-primary hover:bg-primary-600 text-white font-medium text-sm rounded-lg transition-colors"
-        >
-          新增預約
-        </button>
+  
       </header>
 
       {/* 主內容 */}
@@ -402,7 +396,7 @@ export default function AppointmentsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="查詢患者"
-            className="w-full max-w-md h-11 pl-12 pr-4 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+            className="w-full max-w-md h-11 pl-12 pr-4 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
           />
         </div>
 
@@ -417,7 +411,7 @@ export default function AppointmentsPage() {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-36 h-10 px-3 pr-10 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-primary"
+                  className="w-36 h-10 px-3 pr-10 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                 />
                 <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 pointer-events-none" />
               </div>
