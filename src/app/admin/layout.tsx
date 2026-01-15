@@ -30,13 +30,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<{ name: string } | null>(null);
-
-  // 登入頁面不顯示 sidebar
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
+  const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
+    // 登入頁面不需要取得用戶
+    if (isLoginPage) return;
+
     // 取得當前用戶（簡化版，實際應從 API 取得）
     const fetchUser = async () => {
       try {
@@ -50,7 +49,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       }
     };
     fetchUser();
-  }, []);
+  }, [isLoginPage]);
+
+  // 登入頁面不顯示 sidebar
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   const handleLogout = async () => {
     await fetch('/api/admin/auth/logout', { method: 'POST' });
