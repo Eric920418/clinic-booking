@@ -111,7 +111,7 @@ function AdminLayoutInner({ children }: { children: ReactNode }) {
           </button>
 
           {/* 用戶資訊 */}
-          <div className="bg-neutral-50 rounded-lg p-3">
+          <div className="bg-neutral-50 rounded-lg p-3 shadow">
             <div className="font-medium text-neutral-900 text-sm">
               {user?.name || 'Admin User'}
             </div>

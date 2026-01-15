@@ -179,7 +179,7 @@ export default function PatientsPage() {
         {/* 搜尋框 */}
         <div className="mb-6">
           <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
             <input
               type="text"
               value={searchQuery}
@@ -195,11 +195,11 @@ export default function PatientsPage() {
           <table className="w-full">
             <thead>
               <tr className="">
-                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">患者名字</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">基本資料</th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4 w-32">患者名字</th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4 w-40">基本資料</th>
                 <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4 w-24">預約次數</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4 w-1/3">備註</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4 w-20">操作</th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">備註</th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4 w-28">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -247,8 +247,8 @@ export default function PatientsPage() {
                         <div className="text-sm text-error">未報到: {patient.noShowCount} 次</div>
                       )}
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="text-sm text-neutral-600 max-w-xs truncate">{patient.notes}</div>
+                    <td className="px-6 py-5 max-w-0">
+                      <div className="text-sm text-neutral-600 truncate">{patient.notes || '-'}</div>
                     </td>
                     <td className="px-6 py-5">
                       <button
