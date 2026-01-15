@@ -139,10 +139,25 @@ export default function PatientsPage() {
     }
   };
 
-  // 刪除患者（目前API不支援，先顯示提示）
+  // 刪除患者
   const handleDeletePatient = async (id: string) => {
-    setError('刪除功能尚未實作');
-    console.log('嘗試刪除患者:', id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/patients/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        // 重新載入列表
+        await fetchPatients(searchQuery || undefined);
+      } else {
+        setError(result.error?.message || '刪除失敗');
+      }
+    } catch (err) {
+      console.error('刪除患者失敗:', err);
+      setError(err instanceof Error ? err.message : '刪除患者失敗');
+    }
   };
 
   return (

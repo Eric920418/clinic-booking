@@ -518,6 +518,7 @@ tests/e2e/
 | 管理員取得患者列表 | `GET /api/admin/patients` |
 | 管理員取得患者詳情 | `GET /api/admin/patients/{id}` |
 | 管理員編輯病患資料 | `PATCH /api/admin/patients/{id}` |
+| 管理員刪除病患資料 | `DELETE /api/admin/patients/{id}` |
 | 管理員新增帳號 | `POST /api/admin/accounts` |
 | 管理員停用帳號 | `POST /api/admin/accounts/{id}/disable` |
 | 管理員手動新增預約 | `POST /api/admin/appointments` |

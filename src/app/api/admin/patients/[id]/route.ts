@@ -194,3 +194,77 @@ export async function PATCH(
     }, { status: 500 })
   }
 }
+
+// =============================================
+// DELETE: 刪除病患資料
+// 注意：有預約記錄的病患無法刪除
+// =============================================
+export async function DELETE(
+  _request: NextRequest,
+  { params }: RouteParams
+): Promise<NextResponse<ApiResponse>> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '未登入' },
+      }, { status: 401 })
+    }
+
+    const { id } = await params
+
+    // 查詢病患是否存在，並檢查是否有預約記錄
+    const patient = await prisma.patient.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { appointments: true } },
+        blacklist: true,
+      },
+    })
+
+    if (!patient) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '病患不存在' },
+      }, { status: 404 })
+    }
+
+    // 檢查是否有預約記錄
+    if (patient._count.appointments > 0) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'E001',
+          message: `無法刪除：此病患有 ${patient._count.appointments} 筆預約記錄`
+        },
+      }, { status: 400 })
+    }
+
+    // 使用交易刪除病患及關聯的黑名單記錄
+    await prisma.$transaction(async (tx) => {
+      // 先刪除黑名單記錄（如果有）
+      if (patient.blacklist) {
+        await tx.blacklist.delete({
+          where: { patientId: id },
+        })
+      }
+      // 再刪除病患
+      await tx.patient.delete({
+        where: { id },
+      })
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: { message: '病患資料已刪除' },
+    })
+
+  } catch (error) {
+    console.error('[DELETE /api/admin/patients/:id]', error)
+    return NextResponse.json({
+      success: false,
+      error: { code: 'E001', message: '刪除病患資料失敗' },
+    }, { status: 500 })
+  }
+}
