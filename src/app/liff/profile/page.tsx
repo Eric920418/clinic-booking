@@ -1,11 +1,13 @@
 /**
  * 基本資料頁面
  * 用戶填寫個人資料：姓名、電話、身分證、出生日期
+ * 會自動載入緩存的資料，不用每次重填
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLiffAuth } from '@/contexts/LiffAuthContext';
 
 interface FormData {
   name: string;
@@ -23,6 +25,8 @@ interface FormErrors {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { userProfile, setUserProfile, isLoading: isAuthLoading, lineProfile } = useLiffAuth();
+
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -31,6 +35,18 @@ export default function ProfilePage() {
     birthDate: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
+
+  // 載入緩存的用戶資料
+  useEffect(() => {
+    if (userProfile) {
+      setFormData({
+        name: userProfile.name || '',
+        phone: userProfile.phone || '',
+        idNumber: userProfile.idNumber || '',
+        birthDate: userProfile.birthDate || '',
+      });
+    }
+  }, [userProfile]);
 
   // 驗證身分證字號格式
   const validateIdNumber = (id: string): boolean => {
@@ -123,7 +139,10 @@ export default function ProfilePage() {
     setIsLoading(true);
 
     try {
-      // 儲存資料到 sessionStorage
+      // 保存到 Context（會自動緩存到 localStorage）
+      setUserProfile(formData);
+
+      // 同時也存到 sessionStorage（兼容舊邏輯）
       sessionStorage.setItem('profileData', JSON.stringify(formData));
 
       // 跳轉到預約流程
@@ -134,10 +153,17 @@ export default function ProfilePage() {
     }
   };
 
-  // 計算字數
-  const getCharCount = (value: string, max: number) => {
-    return `${value.length}/${max}`;
-  };
+  // 載入中顯示
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-neutral-500">載入中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col">
@@ -151,6 +177,12 @@ export default function ProfilePage() {
           <p className="text-base text-neutral-500">
             請填寫您的基本資料以進行掛號
           </p>
+          {/* LINE 登入用戶歡迎訊息 */}
+          {lineProfile && (
+            <p className="text-sm text-[#06C755] mt-2">
+              {lineProfile.displayName}，歡迎回來
+            </p>
+          )}
         </div>
 
         {/* Form */}

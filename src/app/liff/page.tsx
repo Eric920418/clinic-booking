@@ -7,56 +7,39 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shuffle } from 'lucide-react';
-import liff from '@line/liff';
+import { useLiffAuth } from '@/contexts/LiffAuthContext';
 
 // 產生隨機 4 位數驗證碼
 function generateCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || '';
-
 export default function LiffEntryPage() {
   const router = useRouter();
+  const {
+    isLiffReady,
+    isLoggedIn,
+    isCaptchaVerified,
+    isLoading: isLiffLoading,
+    error: liffError,
+    lineProfile,
+    login,
+    setCaptchaVerified,
+    clearError,
+  } = useLiffAuth();
+
   const [displayCode, setDisplayCode] = useState(() => generateCode());
   const [inputCode, setInputCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [liffError, setLiffError] = useState<string | null>(null);
-  const [isLiffReady, setIsLiffReady] = useState(false);
   const [isLineLoading, setIsLineLoading] = useState(false);
 
-  // 初始化 LIFF
+  // 如果已經驗證過，直接跳轉
   useEffect(() => {
-    const initLiff = async () => {
-      try {
-        if (!LIFF_ID) {
-          setLiffError('LIFF ID 未設定');
-          return;
-        }
-
-        await liff.init({ liffId: LIFF_ID });
-        setIsLiffReady(true);
-
-        // 如果用戶已經登入，自動獲取資料並跳轉
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          localStorage.setItem('lineUserId', profile.userId);
-          localStorage.setItem('lineDisplayName', profile.displayName);
-          if (profile.pictureUrl) {
-            localStorage.setItem('linePictureUrl', profile.pictureUrl);
-          }
-          sessionStorage.setItem('captchaVerified', 'true');
-          router.push('/liff/profile');
-        }
-      } catch (err) {
-        console.error('LIFF 初始化失敗:', err);
-        setLiffError(err instanceof Error ? err.message : 'LIFF 初始化失敗');
-      }
-    };
-
-    initLiff();
-  }, [router]);
+    if (!isLiffLoading && (isLoggedIn || isCaptchaVerified)) {
+      router.push('/liff/profile');
+    }
+  }, [isLiffLoading, isLoggedIn, isCaptchaVerified, router]);
 
   // 刷新驗證碼
   const handleShuffle = useCallback(() => {
@@ -87,8 +70,8 @@ export default function LiffEntryPage() {
 
     setIsLoading(true);
 
-    // 驗證通過，標記已驗證
-    sessionStorage.setItem('captchaVerified', 'true');
+    // 驗證通過
+    setCaptchaVerified(true);
 
     // 跳轉到基本資料頁
     router.push('/liff/profile');
@@ -97,34 +80,30 @@ export default function LiffEntryPage() {
   // LINE 快速登入
   const handleLineLogin = async () => {
     if (!isLiffReady) {
-      setLiffError('LIFF 尚未準備完成，請稍後再試');
       return;
     }
 
     setIsLineLoading(true);
-    setLiffError(null);
+    clearError();
 
     try {
-      if (!liff.isLoggedIn()) {
-        // 導向 LINE 登入頁面
-        liff.login({ redirectUri: window.location.href });
-      } else {
-        // 已登入，獲取用戶資料
-        const profile = await liff.getProfile();
-        localStorage.setItem('lineUserId', profile.userId);
-        localStorage.setItem('lineDisplayName', profile.displayName);
-        if (profile.pictureUrl) {
-          localStorage.setItem('linePictureUrl', profile.pictureUrl);
-        }
-        sessionStorage.setItem('captchaVerified', 'true');
-        router.push('/liff/profile');
-      }
-    } catch (err) {
-      console.error('LINE 登入失敗:', err);
-      setLiffError(err instanceof Error ? err.message : 'LINE 登入失敗');
+      await login();
+    } catch {
       setIsLineLoading(false);
     }
   };
+
+  // 載入中顯示
+  if (isLiffLoading) {
+    return (
+      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-neutral-500">載入中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col">
