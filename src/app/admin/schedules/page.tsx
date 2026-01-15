@@ -12,6 +12,7 @@ import {
   ChevronDown,
   AlertTriangle,
   Info,
+  X,
 } from 'lucide-react';
 import { useDoctors, useSchedules, type Doctor, type Schedule, type TimeSlot } from '@/lib/api';
 
@@ -56,6 +57,12 @@ export default function SchedulesPage() {
   // 選中的時段（日檢視用）
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
 
+  // Modal 狀態
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addScheduleDoctorId, setAddScheduleDoctorId] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // 使用 SWR hooks 取得資料
   const { data: doctorsData } = useDoctors();
   const doctors: Doctor[] = doctorsData || [];
@@ -71,7 +78,7 @@ export default function SchedulesPage() {
     };
   }, [currentYear, currentMonth]);
 
-  const { data: schedulesData, error: swrError, isLoading } = useSchedules(dateRange);
+  const { data: schedulesData, error: swrError, isLoading, mutate } = useSchedules(dateRange);
 
   // 轉換班表資料格式
   const schedules: Schedule[] = useMemo(() => {
@@ -253,6 +260,83 @@ export default function SchedulesPage() {
     });
   };
 
+  // 新增班表
+  const handleAddSchedule = async () => {
+    if (!addScheduleDoctorId || selectedDates.length === 0) {
+      setLocalError('請選擇醫師和日期');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setLocalError(null);
+    const westernYear = currentYear + 1911;
+
+    try {
+      for (const day of selectedDates) {
+        const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const response = await fetch('/api/admin/schedules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doctorId: addScheduleDoctorId, date: dateStr }),
+        });
+        const result = await response.json();
+        if (!result.success) {
+          setLocalError(result.error?.message || '新增班表失敗');
+          break;
+        }
+      }
+      await mutate();
+      setShowAddModal(false);
+      setSelectedDates([]);
+      setAddScheduleDoctorId('');
+    } catch (err) {
+      console.error('新增班表失敗:', err);
+      setLocalError('新增班表失敗');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 臨時休診（將選中的班表設為不可用）
+  const handleSetUnavailable = async () => {
+    if (selectedDates.length === 0) {
+      setLocalError('請先選擇日期');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setLocalError(null);
+    const westernYear = currentYear + 1911;
+
+    try {
+      for (const day of selectedDates) {
+        const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        // 找到該日期的所有班表
+        const daySchedules = schedules.filter((s) => s.date === dateStr);
+        for (const schedule of daySchedules) {
+          if (schedule.isAvailable) {
+            const response = await fetch(`/api/admin/schedules/${schedule.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ isAvailable: false }),
+            });
+            const result = await response.json();
+            if (!result.success) {
+              setLocalError(result.error?.message || '設定休診失敗');
+            }
+          }
+        }
+      }
+      await mutate();
+      setSelectedDates([]);
+    } catch (err) {
+      console.error('設定休診失敗:', err);
+      setLocalError('設定休診失敗');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // 取得特定日期的班表資訊
   const getScheduleForDate = (day: number) => {
     const westernYear = currentYear + 1911;
@@ -341,9 +425,14 @@ export default function SchedulesPage() {
       {/* 主內容區 */}
       <div className="p-8">
         {/* 錯誤提示 */}
-        {error && (
-          <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg text-error">
-            {error}
+        {(error || localError) && (
+          <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg text-error flex justify-between items-center">
+            <span>{error || localError}</span>
+            {localError && (
+              <button type="button" onClick={() => setLocalError(null)} className="text-error hover:text-error-700">
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
 
@@ -395,12 +484,15 @@ export default function SchedulesPage() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="h-10 px-4 bg-white hover:bg-neutral-50 text-neutral-700 font-medium text-sm rounded-lg border border-neutral-300 transition-colors"
+                onClick={handleSetUnavailable}
+                disabled={selectedDates.length === 0 || isSubmitting}
+                className="h-10 px-4 bg-white hover:bg-neutral-50 disabled:bg-neutral-100 disabled:text-neutral-400 text-neutral-700 font-medium text-sm rounded-lg border border-neutral-300 transition-colors"
               >
-                臨時休診
+                臨時休診 {selectedDates.length > 0 && `(${selectedDates.length})`}
               </button>
               <button
                 type="button"
+                onClick={() => setShowAddModal(true)}
                 className="h-10 px-4 bg-primary hover:bg-primary-600 text-white font-medium text-sm rounded-lg transition-colors"
               >
                 新增班表
@@ -807,6 +899,88 @@ export default function SchedulesPage() {
           </div>
         )}
       </div>
+
+      {/* 新增班表 Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-neutral-900">新增班表</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setAddScheduleDoctorId('');
+                }}
+                className="p-1 hover:bg-neutral-100 rounded-lg"
+              >
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* 選擇醫師 */}
+              <div>
+                <label className="text-sm text-neutral-500 mb-2 block">選擇醫師</label>
+                <select
+                  value={addScheduleDoctorId}
+                  onChange={(e) => setAddScheduleDoctorId(e.target.value)}
+                  className="w-full h-11 px-3 bg-white border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                >
+                  <option value="">請選擇醫師</option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor.id} value={doctor.id}>
+                      {doctor.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 已選日期 */}
+              <div>
+                <label className="text-sm text-neutral-500 mb-2 block">
+                  已選日期 {selectedDates.length > 0 && `(${selectedDates.length} 天)`}
+                </label>
+                {selectedDates.length === 0 ? (
+                  <p className="text-sm text-neutral-400">請在日曆上點選日期</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDates.sort((a, b) => a - b).map((day) => (
+                      <span
+                        key={day}
+                        className="px-2 py-1 bg-primary/10 text-primary text-sm rounded"
+                      >
+                        {currentMonth}/{day}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setAddScheduleDoctorId('');
+                }}
+                className="flex-1 h-10 bg-white hover:bg-neutral-50 text-neutral-700 font-medium text-sm rounded-lg border border-neutral-300"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleAddSchedule}
+                disabled={!addScheduleDoctorId || selectedDates.length === 0 || isSubmitting}
+                className="flex-1 h-10 bg-primary hover:bg-primary-600 disabled:bg-neutral-300 text-white font-medium text-sm rounded-lg"
+              >
+                {isSubmitting ? '處理中...' : '確認新增'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
@@ -17,6 +17,7 @@ import {
   Plus,
   LogOut,
 } from 'lucide-react';
+import AddAppointmentModal from '@/components/admin/AddAppointmentModal';
 
 // 導航項目
 const NAV_ITEMS = [
@@ -56,13 +57,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
+  // 新增預約 Modal 狀態
+  const [isAddAppointmentModalOpen, setIsAddAppointmentModalOpen] = useState(false);
+
   const handleLogout = async () => {
     await fetch('/api/admin/auth/logout', { method: 'POST' });
     router.push('/admin/login');
   };
 
   const handleNewAppointment = () => {
-    router.push('/admin/appointments/new');
+    setIsAddAppointmentModalOpen(true);
   };
 
   return (
@@ -133,6 +137,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 ml-60">
         {children}
       </main>
+
+      {/* 新增預約 Modal */}
+      <AddAppointmentModal
+        isOpen={isAddAppointmentModalOpen}
+        onClose={() => setIsAddAppointmentModalOpen(false)}
+        onConfirm={(data) => {
+          console.log('新增預約:', data);
+          // TODO: 實際新增預約邏輯
+        }}
+      />
     </div>
   );
 }

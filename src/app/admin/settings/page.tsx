@@ -200,19 +200,28 @@ export default function SettingsPage() {
   };
 
   // 新增診療項目
-  // TODO: 需要後端實作 POST /api/admin/treatments API 來新增診療項目
   const handleAddTreatment = async () => {
     if (!treatmentName.trim()) return;
 
-    // TODO: 呼叫真實 API 後再 mutate()
-    // const response = await fetch('/api/admin/treatments', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ name: treatmentName, durationMinutes: treatmentMinutes }),
-    // });
-    // if (response.ok) await mutate();
+    try {
+      const response = await fetch('/api/admin/treatments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: treatmentName, durationMinutes: treatmentMinutes }),
+      });
+      const result = await response.json();
 
-    setTreatmentName('');
+      if (result.success) {
+        await mutate();
+        setTreatmentName('');
+        setTreatmentMinutes(5);
+      } else {
+        setLocalError(result.error?.message || '新增診療項目失敗');
+      }
+    } catch (err) {
+      console.error('新增診療項目失敗:', err);
+      setLocalError('新增診療項目失敗');
+    }
   };
 
   // 編輯診療項目
@@ -337,11 +346,28 @@ export default function SettingsPage() {
   };
 
   // 儲存帳號
-  // TODO: 需要後端實作 PUT /api/admin/accounts/{id} API 來更新帳號
-  const handleSaveAccount = async (_accountData: { id: string; username: string; role: string; newPassword?: string }) => {
-    // TODO: 呼叫真實 API 後再 mutate()
-    // const response = await fetch(`/api/admin/accounts/${accountData.id}`, { ... });
-    // if (response.ok) await mutate();
+  const handleSaveAccount = async (accountData: { id: string; username: string; role: string; newPassword?: string }) => {
+    try {
+      const response = await fetch(`/api/admin/accounts/${accountData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: accountData.username,
+          role: accountData.role,
+          newPassword: accountData.newPassword || undefined,
+        }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        await mutate();
+      } else {
+        setLocalError(result.error?.message || '更新帳號失敗');
+      }
+    } catch (err) {
+      console.error('更新帳號失敗:', err);
+      setLocalError('更新帳號失敗');
+    }
   };
 
   // 取得權限標籤

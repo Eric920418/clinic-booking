@@ -105,9 +105,27 @@ export default function DashboardPage() {
 
   // 儲存患者資料
   const handleSavePatient = async (patientData: PatientData) => {
-    // TODO: 呼叫 API 更新患者資料
-    // 更新後重新獲取資料
-    await mutate();
+    try {
+      const response = await fetch(`/api/admin/patients/${patientData.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: patientData.name,
+          phone: patientData.phone,
+          nationalId: patientData.idNumber,
+          birthDate: patientData.birthDate,
+          notes: patientData.note || null,
+        }),
+      });
+      const result = await response.json();
+      if (!result.success) {
+        console.error('更新患者資料失敗:', result.error?.message);
+      }
+      // 更新後重新獲取資料
+      await mutate();
+    } catch (err) {
+      console.error('更新患者資料失敗:', err);
+    }
   };
 
   // 刪除預約
