@@ -890,11 +890,11 @@ export default function SettingsPage() {
               </h2>
 
               {/* 帳號卡片列表 */}
-              <div className="flex flex-wrap gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 {accounts.map((account) => (
                   <div
                     key={account.id}
-                    className="bg-white border border-neutral-200 rounded-xl px-4 py-3 min-w-[160px] relative"
+                    className="bg-white border border-neutral-200 rounded-xl px-4 py-3 relative"
                   >
                     <div className="flex items-start justify-between">
                       <div>
