@@ -264,8 +264,8 @@ export default function DashboardPage() {
           {/* 今日已取消 */}
           <div className="bg-white rounded-xl border border-neutral-200 p-4">
             <div className="flex items-start justify-between">
-              <div className="w-1 h-5 bg-error rounded-full" />
               <div>
+              <div className="w-1 h-full bg-error rounded-full" />
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-neutral-600">今日已取消</span>
                 </div>
