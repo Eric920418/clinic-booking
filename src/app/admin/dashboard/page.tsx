@@ -6,7 +6,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Calendar,
   CheckCircle,
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import EditPatientModal from '@/components/admin/EditPatientModal';
 import { useDashboard, type Doctor } from '@/lib/api';
+import { useAddAppointment } from '@/contexts/AddAppointmentContext';
 
 // 預約類型（從 API 返回的格式）
 interface DashboardAppointment {
@@ -56,7 +56,7 @@ interface PatientData {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
+  const { openModal } = useAddAppointment();
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(undefined);
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
 
@@ -86,7 +86,7 @@ export default function DashboardPage() {
 
   // 新增預約
   const handleNewAppointment = () => {
-    router.push('/admin/appointments/new');
+    openModal();
   };
 
   // 編輯預約 - 開啟 Modal

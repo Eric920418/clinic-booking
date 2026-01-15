@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import { type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
@@ -18,6 +18,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import AddAppointmentModal from '@/components/admin/AddAppointmentModal';
+import { AddAppointmentProvider, useAddAppointment } from '@/contexts/AddAppointmentContext';
 
 // 導航項目
 const NAV_ITEMS = [
@@ -36,14 +37,15 @@ const authFetcher = async (url: string) => {
   return json.success ? json.data : null;
 };
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+// 內部 Layout 組件（需要使用 Context）
+function AdminLayoutInner({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const isLoginPage = pathname === '/admin/login';
+  const { isOpen, openModal, closeModal } = useAddAppointment();
 
   // 使用 SWR 緩存用戶資料，避免每次都重新請求
   const { data: user } = useSWR<{ name: string } | null>(
-    isLoginPage ? null : '/api/admin/auth/me',
+    '/api/admin/auth/me',
     authFetcher,
     {
       revalidateOnFocus: false,
@@ -52,21 +54,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
   );
 
-  // 登入頁面不顯示 sidebar
-  if (isLoginPage) {
-    return <>{children}</>;
-  }
-
-  // 新增預約 Modal 狀態
-  const [isAddAppointmentModalOpen, setIsAddAppointmentModalOpen] = useState(false);
-
   const handleLogout = async () => {
     await fetch('/api/admin/auth/logout', { method: 'POST' });
     router.push('/admin/login');
   };
 
   const handleNewAppointment = () => {
-    setIsAddAppointmentModalOpen(true);
+    openModal();
   };
 
   return (
@@ -140,13 +134,30 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* 新增預約 Modal */}
       <AddAppointmentModal
-        isOpen={isAddAppointmentModalOpen}
-        onClose={() => setIsAddAppointmentModalOpen(false)}
+        isOpen={isOpen}
+        onClose={closeModal}
         onConfirm={(data) => {
           console.log('新增預約:', data);
           // TODO: 實際新增預約邏輯
         }}
       />
     </div>
+  );
+}
+
+// 主 Layout 組件（包含 Provider 和登入頁面判斷）
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/admin/login';
+
+  // 登入頁面不顯示 sidebar，也不需要 Provider
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  return (
+    <AddAppointmentProvider>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </AddAppointmentProvider>
   );
 }

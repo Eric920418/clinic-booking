@@ -552,6 +552,8 @@ Dashboard 頁面優化：API 自動選擇第一個醫師，前端只需同步 `s
 
 Admin Layout 優化：使用 SWR 緩存用戶認證資料（60 秒內不重複請求），避免每次頁面切換都重新調用認證 API。
 
+新增預約 Modal：使用 React Context (`AddAppointmentContext`) 管理全局 Modal 狀態，讓 Dashboard、預約排程等所有頁面的「新增預約」按鈕都能觸發同一個 Modal，避免頁面跳轉。
+
 ### 合併 API
 
 為減少網路請求次數，後台頁面使用合併 API：

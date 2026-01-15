@@ -6,7 +6,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Search,
   Calendar,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import EditAppointmentModal from '@/components/admin/EditAppointmentModal';
 import { useDoctors, useAppointments, type Doctor } from '@/lib/api';
+import { useAddAppointment } from '@/contexts/AddAppointmentContext';
 
 // 預約類型
 interface Appointment {
@@ -177,7 +177,7 @@ function MultiSelectDropdown({
 }
 
 export default function AppointmentsPage() {
-  const router = useRouter();
+  const { openModal } = useAddAppointment();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -264,7 +264,7 @@ export default function AppointmentsPage() {
 
   // 新增預約
   const handleNewAppointment = () => {
-    router.push('/admin/appointments/new');
+    openModal();
   };
 
   // 編輯預約
@@ -305,7 +305,7 @@ export default function AppointmentsPage() {
   // 儲存預約資料
   const handleSaveAppointment = async (data: AppointmentData) => {
     try {
-      const response = await fetch(`/api/admin/appointments/${data.id}`, {
+      const response = await fetch(`/api/admin/appointments/${data.id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -313,9 +313,12 @@ export default function AppointmentsPage() {
         }),
       });
 
-      if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
         // 使用 SWR mutate 重新獲取資料
         await mutate();
+      } else {
+        console.error('更新預約失敗:', result.error?.message);
       }
     } catch (err) {
       console.error('更新預約失敗:', err);
