@@ -256,7 +256,7 @@ export default function DashboardPage() {
           </div>
 
           {/* 今日已取消 */}
-          <div className="flex-1 bg-white rounded p-3 border border-error flex flex-col gap-6">
+          <div className="flex-1 bg-white rounded p-3 border-l-4 border-error flex flex-col gap-6">
             <h3 className="text-xl font-bold text-neutral-900">今日已取消</h3>
             <div className="flex items-center justify-between">
               <span className="text-[28px] font-bold text-neutral-900 leading-tight">
