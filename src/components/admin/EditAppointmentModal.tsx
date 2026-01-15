@@ -110,7 +110,7 @@ export default function EditAppointmentModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-neutral-100">
+        <div className="flex items-center justify-between p-4 border-b border-neutral-100">
           <h2 className="text-lg font-bold text-neutral-900">編輯患者資料</h2>
           <button
             type="button"
@@ -122,7 +122,7 @@ export default function EditAppointmentModal({
         </div>
 
         {/* Form */}
-        <div className="p-5 space-y-4">
+        <div className="p-4 space-y-4">
           {/* 預約日期 & 看診時間 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
