@@ -228,52 +228,43 @@ export default function DashboardPage() {
         </div>
 
         {/* 統計卡片 */}
-        <div className="grid grid-cols-3 gap-6 mb-6">
+        <div className="flex items-center gap-6 mb-6">
           {/* 今日已預約 */}
-          <div className="bg-white rounded-xl border border-neutral-200 p-4">
-            <div className="flex items-start justify-between">
-              <div className="w-1 h-5 bg-primary rounded-full" />
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-neutral-600">今日已預約</span>
-                </div>
-                <div className="text-4xl font-bold text-neutral-900">
-                  {summary.todayBooked}
-                </div>
+          <div className="flex-1 bg-white rounded p-3 border border-primary flex flex-col gap-6">
+            <h3 className="text-xl font-bold text-neutral-900">今日已預約</h3>
+            <div className="flex items-center justify-between">
+              <span className="text-[28px] font-bold text-neutral-900 leading-tight">
+                {summary.todayBooked}
+              </span>
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-[0px_6px_29px_rgba(0,0,0,0.1),0px_4px_8px_rgba(0,0,0,0.05),0px_2px_8px_rgba(0,0,0,0.05)]">
+                <Calendar className="w-6 h-6 text-neutral-500" />
               </div>
-              <Calendar className="w-6 h-6 text-neutral-300" />
             </div>
           </div>
 
           {/* 今日已完成 */}
-          <div className="bg-white rounded-xl border border-neutral-200 p-4">
-            <div className="flex items-start justify-between">
-              <div className="w-1 h-5 bg-success rounded-full" />
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-neutral-600">今日已完成</span>
-                </div>
-                <div className="text-4xl font-bold text-neutral-900">
-                  {summary.todayCompleted}
-                </div>
+          <div className="flex-1 bg-white rounded p-3 border border-success flex flex-col gap-6">
+            <h3 className="text-xl font-bold text-neutral-900">今日已完成</h3>
+            <div className="flex items-center justify-between">
+              <span className="text-[28px] font-bold text-neutral-900 leading-tight">
+                {summary.todayCompleted}
+              </span>
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-[0px_6px_29px_rgba(0,0,0,0.1),0px_4px_8px_rgba(0,0,0,0.05),0px_2px_8px_rgba(0,0,0,0.05)]">
+                <CheckCircle className="w-6 h-6 text-neutral-500" />
               </div>
-              <CheckCircle className="w-6 h-6 text-neutral-300" />
             </div>
           </div>
 
           {/* 今日已取消 */}
-          <div className="bg-white rounded-xl border border-neutral-200 p-4">
-            <div className="flex items-start justify-between">
-              <div>
-              <div className="w-1 h-full bg-error rounded-full" />
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-neutral-600">今日已取消</span>
-                </div>
-                <div className="text-4xl font-bold text-neutral-900">
-                  {summary.todayCancelled}
-                </div>
+          <div className="flex-1 bg-white rounded p-3 border border-error flex flex-col gap-6">
+            <h3 className="text-xl font-bold text-neutral-900">今日已取消</h3>
+            <div className="flex items-center justify-between">
+              <span className="text-[28px] font-bold text-neutral-900 leading-tight">
+                {summary.todayCancelled}
+              </span>
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-[0px_6px_29px_rgba(0,0,0,0.1),0px_4px_8px_rgba(0,0,0,0.05),0px_2px_8px_rgba(0,0,0,0.05)]">
+                <XCircle className="w-6 h-6 text-neutral-500" />
               </div>
-              <XCircle className="w-6 h-6 text-neutral-300" />
             </div>
           </div>
         </div>
