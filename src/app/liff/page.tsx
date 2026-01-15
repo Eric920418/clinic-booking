@@ -6,7 +6,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { RefreshCw } from 'lucide-react';
+import { Shuffle } from 'lucide-react';
 
 // 產生隨機 4 位數驗證碼
 function generateCode(): string {
@@ -56,6 +56,12 @@ export default function LiffEntryPage() {
     router.push('/liff/profile');
   };
 
+  // LINE 快速登入
+  const handleLineLogin = () => {
+    // TODO: 實際 LINE Login 邏輯
+    console.log('LINE Login');
+  };
+
   return (
     <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col">
       {/* Main Content */}
@@ -74,17 +80,17 @@ export default function LiffEntryPage() {
         <div className="px-4">
           <div className="bg-white rounded-xl border border-neutral-200 shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] p-4 pt-8 pb-8">
             {/* 驗證碼顯示區 */}
-            <div className="bg-neutral-100 rounded-xl px-4 py-4 flex items-center justify-between mb-6">
-              <span className="text-2xl font-bold text-neutral-900 tracking-[0.5em] pl-2">
+            <div className="bg-white rounded-xl border border-neutral-300 px-4 py-4 flex items-center justify-between mb-4">
+              <span className="text-2xl font-bold text-neutral-900 tracking-[0.3em] pl-2">
                 {displayCode}
               </span>
               <button
                 type="button"
                 onClick={handleShuffle}
-                className="p-2 text-neutral-600 hover:text-neutral-800 transition-colors"
+                className="p-2 text-neutral-500 hover:text-neutral-700 transition-colors"
                 aria-label="刷新驗證碼"
               >
-                <RefreshCw className="w-6 h-6" />
+                <Shuffle className="w-5 h-5" />
               </button>
             </div>
 
@@ -98,10 +104,10 @@ export default function LiffEntryPage() {
                   placeholder="輸入驗證碼"
                   value={inputCode}
                   onChange={handleInputChange}
-                  className={`w-full h-12 px-4 bg-neutral-100 rounded-xl border text-base placeholder:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-[#008ADA]/20 transition-all ${
+                  className={`w-full h-12 px-4 bg-white rounded-xl border text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-200 transition-all ${
                     error
                       ? 'border-error text-error'
-                      : 'border-neutral-400 text-neutral-900 focus:border-[#008ADA]'
+                      : 'border-neutral-300 text-neutral-900 focus:border-neutral-400'
                   }`}
                   maxLength={4}
                 />
@@ -115,12 +121,36 @@ export default function LiffEntryPage() {
                 type="button"
                 onClick={handleVerify}
                 disabled={isLoading || inputCode.length !== 4}
-                className="w-full h-12 bg-[#008ADA] hover:bg-[#0076A5] disabled:bg-neutral-300 text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all disabled:shadow-none"
+                className="w-full h-12 bg-neutral-800 hover:bg-neutral-900 disabled:bg-neutral-300 text-white font-bold text-base rounded-xl transition-colors"
               >
                 {isLoading ? '驗證中...' : '驗證並繼續'}
               </button>
             </div>
           </div>
+
+          {/* 分隔線 */}
+          <div className="flex items-center gap-4 my-6">
+            <div className="flex-1 h-px bg-neutral-200" />
+            <span className="text-sm text-neutral-400">使用快速登入</span>
+            <div className="flex-1 h-px bg-neutral-200" />
+          </div>
+
+          {/* LINE 快速登入按鈕 */}
+          <button
+            type="button"
+            onClick={handleLineLogin}
+            className="w-full h-12 bg-[#06C755] hover:bg-[#05B54C] text-white font-bold text-base rounded-xl flex items-center justify-center gap-2 transition-colors"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" />
+            </svg>
+            LINE 快速登入
+          </button>
+
+          {/* 底部提示 */}
+          <p className="text-center text-sm text-neutral-400 mt-4">
+            登入後，預約3小時前將有自動提醒功能
+          </p>
         </div>
       </main>
     </div>
