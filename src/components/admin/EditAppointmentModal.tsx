@@ -17,12 +17,18 @@ interface AppointmentData {
   note: string;
 }
 
+interface DoctorOption {
+  id: string;
+  name: string;
+}
+
 interface EditAppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: AppointmentData) => void;
   onDelete: (id: string) => void;
   initialData: AppointmentData | null;
+  doctors?: DoctorOption[];
 }
 
 // 時間選項
@@ -31,14 +37,8 @@ const TIME_OPTIONS = [
   '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
 ];
 
-// 醫師選項
-const DOCTOR_OPTIONS = [
-  { id: '1', name: '王醫師' },
-  { id: '2', name: '李醫師' },
-  { id: '3', name: '陳醫師' },
-  { id: '4', name: '林醫師' },
-  { id: '5', name: '張醫師' },
-];
+// 預設醫師選項（當沒有傳入 doctors 時使用）
+const DEFAULT_DOCTOR_OPTIONS: DoctorOption[] = [];
 
 // 項目選項
 const TREATMENT_OPTIONS = [
@@ -62,7 +62,10 @@ export default function EditAppointmentModal({
   onSave,
   onDelete,
   initialData,
+  doctors = DEFAULT_DOCTOR_OPTIONS,
 }: EditAppointmentModalProps) {
+  // 使用傳入的醫師列表
+  const doctorOptions = doctors.length > 0 ? doctors : DEFAULT_DOCTOR_OPTIONS;
   const [formData, setFormData] = useState<AppointmentData>({
     id: '',
     date: '',
@@ -102,7 +105,7 @@ export default function EditAppointmentModal({
     onClose();
   };
 
-  const selectedDoctor = DOCTOR_OPTIONS.find((d) => d.id === formData.doctorId);
+  const selectedDoctor = doctorOptions.find((d) => d.id === formData.doctorId);
   const selectedTreatment = TREATMENT_OPTIONS.find((t) => t.value === formData.treatmentType);
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === formData.status);
 
@@ -187,7 +190,7 @@ export default function EditAppointmentModal({
               </button>
               {openDropdown === 'doctor' && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-10">
-                  {DOCTOR_OPTIONS.map((doctor) => {
+                  {doctorOptions.map((doctor) => {
                     const isSelected = formData.doctorId === doctor.id;
                     return (
                       <button

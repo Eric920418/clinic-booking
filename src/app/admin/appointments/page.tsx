@@ -561,6 +561,7 @@ export default function AppointmentsPage() {
         onSave={handleSaveAppointment}
         onDelete={handleDeleteAppointment}
         initialData={editingAppointment}
+        doctors={doctors}
       />
     </div>
   );
