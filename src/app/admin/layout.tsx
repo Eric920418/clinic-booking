@@ -128,7 +128,7 @@ function AdminLayoutInner({ children }: { children: ReactNode }) {
       </aside>
 
       {/* 主內容區 */}
-      <main className="flex-1 ml-60">
+      <main className="flex-1 ml-60 bg-white">
         {children}
       </main>
 
