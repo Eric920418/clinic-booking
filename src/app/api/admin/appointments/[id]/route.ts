@@ -170,30 +170,16 @@ export async function PUT(
           throw new Error('E001_NO_SCHEDULE'); // 該日期無班表
         }
 
-        // 在應用層面比對時間（因為 startTime 是 DateTime 類型，需要格式化後比對）
-        // 調試：打印時間格式
-        console.log('[DEBUG] normalizedTime:', normalizedTime);
-        console.log('[DEBUG] schedule.timeSlots:', schedule.timeSlots.map((slot) => {
-          const slotTime = new Date(slot.startTime);
-          return {
-            id: slot.id,
-            startTime: slot.startTime,
-            utc: `${slotTime.getUTCHours().toString().padStart(2, '0')}:${slotTime.getUTCMinutes().toString().padStart(2, '0')}`,
-            local: `${slotTime.getHours().toString().padStart(2, '0')}:${slotTime.getMinutes().toString().padStart(2, '0')}`,
-          };
-        }));
+        // 在應用層面比對時間
+        // 由於時間存儲為 UTC 並有時區偏移，使用 slot ID 中的時間來比對
+        // slot ID 格式：slot-{doctorId}-{date}-{HHmm}
+        const normalizedTimeNoColon = normalizedTime.replace(':', ''); // "10:00" -> "1000"
 
         const timeSlot = schedule.timeSlots.find((slot) => {
-          const slotTime = new Date(slot.startTime);
-          // 嘗試用本地時間比對
-          const slotHours = slotTime.getHours().toString().padStart(2, '0');
-          const slotMinutes = slotTime.getMinutes().toString().padStart(2, '0');
-          const slotTimeStr = `${slotHours}:${slotMinutes}`;
-          // 也嘗試用 UTC 時間比對
-          const slotHoursUTC = slotTime.getUTCHours().toString().padStart(2, '0');
-          const slotMinutesUTC = slotTime.getUTCMinutes().toString().padStart(2, '0');
-          const slotTimeStrUTC = `${slotHoursUTC}:${slotMinutesUTC}`;
-          return slotTimeStr === normalizedTime || slotTimeStrUTC === normalizedTime;
+          // 從 slot ID 中提取時間部分（最後 4 個字符）
+          const slotIdParts = slot.id.split('-');
+          const slotTimeFromId = slotIdParts[slotIdParts.length - 1]; // "1000"
+          return slotTimeFromId === normalizedTimeNoColon;
         });
 
         if (!timeSlot) {
