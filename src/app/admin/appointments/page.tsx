@@ -1,10 +1,11 @@
 /**
  * 管理後台 - 預約排程
  * 顯示預約列表，支援搜尋、多選篩選、出席管理
+ * 使用 SWR 進行資料快取
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Search,
@@ -15,18 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import EditAppointmentModal from '@/components/admin/EditAppointmentModal';
-
-// 醫師類型
-interface Doctor {
-  id: string;
-  name: string;
-}
-
-// 診療類型
-interface TreatmentType {
-  id: string;
-  name: string;
-}
+import { useDoctors, useAppointments, type Doctor } from '@/lib/api';
 
 // 預約類型
 interface Appointment {
@@ -193,12 +183,6 @@ export default function AppointmentsPage() {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-
-  // 載入狀態
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // 多選篩選狀態
   const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
@@ -212,88 +196,43 @@ export default function AppointmentsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<AppointmentData | null>(null);
 
-  // 載入醫師列表
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const response = await fetch('/api/liff/doctors');
-        const result = await response.json();
-        if (result.success && result.data) {
-          setDoctors(result.data.map((d: { id: string; name: string }) => ({
-            id: d.id,
-            name: d.name,
-          })));
-        }
-      } catch (err) {
-        console.error('載入醫師列表失敗:', err);
-      }
-    };
-    fetchDoctors();
-  }, []);
+  // 使用 SWR hooks 取得資料
+  const { data: doctorsData } = useDoctors();
+  const doctors: Doctor[] = doctorsData || [];
 
-  // 載入預約列表
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (selectedDate) {
-          params.append('dateFrom', selectedDate);
-          params.append('dateTo', selectedDate);
-        }
-        if (selectedDoctors.length > 0 && selectedDoctors.length < doctors.length) {
-          // API 目前只支援單一 doctorId，需要多次請求或後端支援
-          params.append('doctorId', selectedDoctors[0]);
-        }
-        if (selectedStatuses.length === 1) {
-          params.append('status', selectedStatuses[0]);
-        }
+  // 建立篩選參數
+  const appointmentFilters = useMemo(() => ({
+    dateFrom: selectedDate,
+    dateTo: selectedDate,
+    doctorId: selectedDoctors.length === 1 ? selectedDoctors[0] : undefined,
+    status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
+  }), [selectedDate, selectedDoctors, selectedStatuses]);
 
-        const response = await fetch(`/api/admin/appointments?${params}`);
-        const result = await response.json();
+  const { data: appointmentsData, error: swrError, isLoading, mutate } = useAppointments(appointmentFilters);
 
-        if (result.success && result.data?.items) {
-          const appointmentList: Appointment[] = result.data.items.map((item: {
-            id: string;
-            startTime: string;
-            appointmentDate: string;
-            patientName: string;
-            patientPhone?: string;
-            doctor: string;
-            treatmentType: string;
-            status: string;
-          }) => ({
-            id: item.id,
-            time: item.startTime,
-            date: item.appointmentDate,
-            patientName: item.patientName,
-            idNumber: '',
-            birthDate: '',
-            phone: item.patientPhone || '',
-            doctorId: '',
-            doctorName: item.doctor,
-            treatmentType: item.treatmentType,
-            treatmentTypeId: '',
-            status: item.status,
-            note: '',
-            attendance: null,
-          }));
-          setAppointments(appointmentList);
-        } else {
-          setAppointments([]);
-        }
-        setError(null);
-      } catch (err) {
-        console.error('載入預約列表失敗:', err);
-        setError('載入預約列表失敗');
-        setAppointments([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // 轉換預約資料格式
+  const appointments: Appointment[] = useMemo(() => {
+    if (!appointmentsData?.items) return [];
+    return appointmentsData.items.map((item) => ({
+      id: item.id,
+      time: item.startTime,
+      date: item.appointmentDate,
+      patientName: item.patientName,
+      idNumber: '',
+      birthDate: '',
+      phone: item.patientPhone || '',
+      doctorId: item.doctorId || '',
+      doctorName: item.doctor,
+      treatmentType: item.treatmentType,
+      treatmentTypeId: item.treatmentTypeId || '',
+      status: item.status,
+      note: item.notes || '',
+      attendance: null,
+    }));
+  }, [appointmentsData]);
 
-    fetchAppointments();
-  }, [selectedDate, selectedDoctors, selectedStatuses, doctors.length]);
+  const loading = isLoading;
+  const error = swrError ? swrError.message : null;
 
   // 取得顯示文字
   const getDoctorDisplayText = () => {
@@ -355,11 +294,8 @@ export default function AppointmentsPage() {
       });
 
       if (response.ok) {
-        setAppointments((prev) =>
-          prev.map((apt) =>
-            apt.id === id ? { ...apt, attendance: status, status: newStatus } : apt
-          )
-        );
+        // 使用 SWR mutate 重新獲取資料
+        await mutate();
       }
     } catch (err) {
       console.error('更新出席狀態失敗:', err);
@@ -378,22 +314,8 @@ export default function AppointmentsPage() {
       });
 
       if (response.ok) {
-        const doctor = doctors.find((d) => d.id === data.doctorId);
-        setAppointments((prev) =>
-          prev.map((apt) =>
-            apt.id === data.id
-              ? {
-                  ...apt,
-                  date: data.date,
-                  time: data.time,
-                  doctorName: doctor?.name || apt.doctorName,
-                  treatmentType: data.treatmentType === 'internal' ? '內科' : data.treatmentType === 'first_visit' ? '初診' : '針灸',
-                  status: data.status,
-                  note: data.note,
-                }
-              : apt
-          )
-        );
+        // 使用 SWR mutate 重新獲取資料
+        await mutate();
       }
     } catch (err) {
       console.error('更新預約失敗:', err);
@@ -407,7 +329,8 @@ export default function AppointmentsPage() {
         method: 'DELETE',
       });
       if (response.ok) {
-        setAppointments((prev) => prev.filter((apt) => apt.id !== id));
+        // 使用 SWR mutate 重新獲取資料
+        await mutate();
       }
     } catch (err) {
       console.error('刪除預約失敗:', err);

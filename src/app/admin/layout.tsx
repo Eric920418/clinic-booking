@@ -86,6 +86,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={`flex items-center gap-3 px-6 py-3 text-sm font-medium transition-colors ${
                   isActive
                     ? 'text-primary bg-primary/5 border-l-4 border-primary'

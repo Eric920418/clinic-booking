@@ -1,10 +1,11 @@
 /**
  * 診次排班頁面 - 月曆檢視
  * 管理醫師的排班表
+ * 使用 SWR 進行資料快取
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,31 +13,7 @@ import {
   AlertTriangle,
   Info,
 } from 'lucide-react';
-
-// 醫師類型
-interface Doctor {
-  id: string;
-  name: string;
-}
-
-// 班表類型
-interface Schedule {
-  id: string;
-  doctorId: string;
-  doctorName: string;
-  date: string;
-  isAvailable: boolean;
-  timeSlots: TimeSlot[];
-}
-
-// 時段類型
-interface TimeSlot {
-  id: string;
-  startTime: string;
-  endTime: string;
-  totalMinutes: number;
-  remainingMinutes: number;
-}
+import { useDoctors, useSchedules, type Doctor, type Schedule, type TimeSlot } from '@/lib/api';
 
 // 時段選項
 const TIME_SLOT_OPTIONS = [
@@ -65,15 +42,6 @@ export default function SchedulesPage() {
   });
   const [viewMode, setViewMode] = useState<ViewMode>('month');
 
-  // 醫師列表
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  // 班表資料
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
-
-  // 載入狀態
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   // 篩選狀態
   const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(TIME_SLOT_OPTIONS[0].id);
@@ -88,74 +56,38 @@ export default function SchedulesPage() {
   // 選中的時段（日檢視用）
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
 
-  // 載入醫師列表
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const response = await fetch('/api/liff/doctors');
-        const result = await response.json();
-        if (result.success && result.data) {
-          setDoctors(result.data.map((d: { id: string; name: string }) => ({
-            id: d.id,
-            name: d.name,
-          })));
-        }
-      } catch (err) {
-        console.error('載入醫師列表失敗:', err);
-      }
+  // 使用 SWR hooks 取得資料
+  const { data: doctorsData } = useDoctors();
+  const doctors: Doctor[] = doctorsData || [];
+
+  // 計算日期範圍
+  const dateRange = useMemo(() => {
+    const westernYear = currentYear + 1911;
+    const startDate = new Date(westernYear, currentMonth - 1, 1);
+    const endDate = new Date(westernYear, currentMonth, 0);
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
     };
-    fetchDoctors();
-  }, []);
-
-  // 載入班表資料
-  useEffect(() => {
-    const fetchSchedules = async () => {
-      setLoading(true);
-      try {
-        const westernYear = currentYear + 1911;
-        const startDate = new Date(westernYear, currentMonth - 1, 1);
-        const endDate = new Date(westernYear, currentMonth, 0);
-
-        const params = new URLSearchParams({
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
-        });
-
-        const response = await fetch(`/api/admin/schedules?${params}`);
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          const scheduleList: Schedule[] = result.data.map((item: {
-            id: string;
-            doctorId: string;
-            doctor: { name: string };
-            date: string;
-            isAvailable: boolean;
-            timeSlots: TimeSlot[];
-          }) => ({
-            id: item.id,
-            doctorId: item.doctorId,
-            doctorName: item.doctor?.name || '',
-            date: new Date(item.date).toISOString().split('T')[0],
-            isAvailable: item.isAvailable,
-            timeSlots: item.timeSlots || [],
-          }));
-          setSchedules(scheduleList);
-        } else {
-          setSchedules([]);
-        }
-        setError(null);
-      } catch (err) {
-        console.error('載入班表失敗:', err);
-        setError('載入班表失敗');
-        setSchedules([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSchedules();
   }, [currentYear, currentMonth]);
+
+  const { data: schedulesData, error: swrError, isLoading } = useSchedules(dateRange);
+
+  // 轉換班表資料格式
+  const schedules: Schedule[] = useMemo(() => {
+    if (!schedulesData) return [];
+    return schedulesData.map((item) => ({
+      id: item.id,
+      doctorId: item.doctorId,
+      doctorName: item.doctorName,
+      date: item.date,
+      isAvailable: item.isAvailable,
+      timeSlots: item.timeSlots || [],
+    }));
+  }, [schedulesData]);
+
+  const loading = isLoading;
+  const error = swrError ? swrError.message : null;
 
   // 西元年轉民國年
   const toMinguoYear = (westernYear: number) => westernYear - 1911;

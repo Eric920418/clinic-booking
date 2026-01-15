@@ -180,3 +180,98 @@ export function useSettings(config?: SWRConfiguration) {
     { ...defaultConfig, ...config }
   );
 }
+
+// ==================== 班表類型 ====================
+
+export interface Schedule {
+  id: string;
+  doctorId: string;
+  doctorName: string;
+  date: string;
+  isAvailable: boolean;
+  timeSlots: TimeSlot[];
+}
+
+/**
+ * 取得班表列表
+ */
+export function useSchedules(
+  filters?: {
+    startDate?: string;
+    endDate?: string;
+  },
+  config?: SWRConfiguration
+) {
+  const params = new URLSearchParams();
+  if (filters?.startDate) params.append('startDate', filters.startDate);
+  if (filters?.endDate) params.append('endDate', filters.endDate);
+
+  const key = filters?.startDate && filters?.endDate
+    ? `/api/admin/schedules?${params}`
+    : null;
+
+  return useSWR<Schedule[]>(
+    key,
+    fetcher,
+    { ...defaultConfig, ...config }
+  );
+}
+
+// ==================== 預約排程頁面類型 ====================
+
+export interface AppointmentListItem {
+  id: string;
+  startTime: string;
+  appointmentDate: string;
+  patientName: string;
+  patientPhone?: string;
+  patientNationalId?: string;
+  patientBirthDate?: string;
+  doctor: string;
+  doctorId: string;
+  treatmentType: string;
+  treatmentTypeId: string;
+  status: string;
+  notes?: string;
+}
+
+/**
+ * 取得預約排程頁面資料（含醫師列表）
+ */
+export function useAppointmentPage(
+  filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    doctorId?: string;
+    status?: string;
+  },
+  config?: SWRConfiguration
+) {
+  const params = new URLSearchParams();
+  if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
+  if (filters?.dateTo) params.append('dateTo', filters.dateTo);
+  if (filters?.doctorId) params.append('doctorId', filters.doctorId);
+  if (filters?.status) params.append('status', filters.status);
+
+  // 同時取得醫師列表（用於篩選）
+  const appointmentsResult = useSWR<{ items: AppointmentListItem[]; total: number }>(
+    `/api/admin/appointments?${params}`,
+    fetcher,
+    { ...defaultConfig, ...config }
+  );
+
+  const doctorsResult = useSWR<Doctor[]>(
+    '/api/liff/doctors',
+    fetcher,
+    { ...defaultConfig, ...config }
+  );
+
+  return {
+    appointments: appointmentsResult.data?.items || [],
+    total: appointmentsResult.data?.total || 0,
+    doctors: doctorsResult.data || [],
+    isLoading: appointmentsResult.isLoading || doctorsResult.isLoading,
+    error: appointmentsResult.error || doctorsResult.error,
+    mutate: appointmentsResult.mutate,
+  };
+}
