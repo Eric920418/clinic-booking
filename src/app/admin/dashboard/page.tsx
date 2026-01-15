@@ -75,14 +75,23 @@ export default function DashboardPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<PatientData | null>(null);
 
-  // 載入醫師列表
+  // 初始載入：並行請求醫師列表和統計數據
   useEffect(() => {
-    const fetchDoctors = async () => {
+    const fetchInitialData = async () => {
       try {
-        const response = await fetch('/api/liff/doctors');
-        const result = await response.json();
-        if (result.success && result.data) {
-          const doctorList = result.data.map((d: { id: string; name: string }) => ({
+        const [doctorsRes, summaryRes] = await Promise.all([
+          fetch('/api/liff/doctors'),
+          fetch('/api/admin/dashboard/summary'),
+        ]);
+
+        const [doctorsData, summaryData] = await Promise.all([
+          doctorsRes.json(),
+          summaryRes.json(),
+        ]);
+
+        // 設置醫師列表
+        if (doctorsData.success && doctorsData.data) {
+          const doctorList = doctorsData.data.map((d: { id: string; name: string }) => ({
             id: d.id,
             name: d.name,
           }));
@@ -91,32 +100,21 @@ export default function DashboardPage() {
             setSelectedDoctor(doctorList[0]);
           }
         }
-      } catch (err) {
-        console.error('載入醫師列表失敗:', err);
-        setError('載入醫師列表失敗');
-      }
-    };
-    fetchDoctors();
-  }, []);
 
-  // 載入統計數據
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        const response = await fetch('/api/admin/dashboard/summary');
-        const result = await response.json();
-        if (result.success && result.data) {
+        // 設置統計數據
+        if (summaryData.success && summaryData.data) {
           setStats({
-            booked: result.data.todayBooked || 0,
-            completed: result.data.todayCompleted || 0,
-            cancelled: result.data.todayCancelled || 0,
+            booked: summaryData.data.todayBooked || 0,
+            completed: summaryData.data.todayCompleted || 0,
+            cancelled: summaryData.data.todayCancelled || 0,
           });
         }
       } catch (err) {
-        console.error('載入統計數據失敗:', err);
+        console.error('載入資料失敗:', err);
+        setError('載入資料失敗');
       }
     };
-    fetchSummary();
+    fetchInitialData();
   }, []);
 
   // 載入今日預約列表
