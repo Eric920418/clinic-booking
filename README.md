@@ -601,6 +601,10 @@ appointments 表包含以下索引優化查詢效能：
 - `@@index([doctorId, appointmentDate])` - 複合索引（醫師+日期）
 - `@@index([status])` - 狀態篩選
 
+### Vercel 部署區域
+
+`vercel.json` 設定部署區域為 `sin1`（新加坡），與 Supabase 資料庫（ap-southeast-1）同區域，減少跨區網路延遲。
+
 ### Next.js Link 優化
 
 Admin Layout 中的導航連結已設置 `prefetch={false}`，避免預先載入所有頁面資料。
