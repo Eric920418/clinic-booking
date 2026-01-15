@@ -871,13 +871,15 @@ export default function SettingsPage() {
                 </div>
 
                 {/* 建立按鈕 */}
-                <button
-                  type="button"
-                  onClick={handleAddAccount}
-                  className="flex-1 h-11 bg-primary hover:bg-primary-600 text-white font-medium text-sm rounded-lg transition-colors"
-                >
-                  建立
-                </button>
+                <div className="w-full flex items-end">
+                  <button
+                    type="button"
+                    onClick={handleAddAccount}
+                    className="w-full h-11 bg-primary hover:bg-primary-600 text-white font-medium text-sm rounded-lg transition-colors"
+                  >
+                    建立
+                  </button>
+                </div>
               </div>
             </section>
 
