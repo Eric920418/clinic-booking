@@ -64,7 +64,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1d3a3e] to-[#2d5a4e] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-950 to-primary-700 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo 區域 */}
         <div className="text-center mb-8">

@@ -205,7 +205,7 @@ export default function SelectDoctorAndDatePage() {
                 onClick={() => handleSelectDoctor(doctor.id)}
                 className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${
                   selectedDoctor === doctor.id
-                    ? 'border-[#008ADA] bg-[#008ADA]/5'
+                    ? 'border-primary-500 bg-primary-500/5'
                     : 'border-neutral-400 bg-white'
                 }`}
               >
@@ -218,7 +218,7 @@ export default function SelectDoctorAndDatePage() {
                   </div>
                 </div>
                 {selectedDoctor === doctor.id ? (
-                  <CheckCircle2 className="w-6 h-6 text-[#008ADA]" />
+                  <CheckCircle2 className="w-6 h-6 text-primary-500" />
                 ) : (
                   <Circle className="w-6 h-6 text-neutral-300" />
                 )}
@@ -272,7 +272,7 @@ export default function SelectDoctorAndDatePage() {
                 <div
                   key={day}
                   className={`text-center text-sm font-medium py-2 ${
-                    index === 0 ? 'text-error' : index === 6 ? 'text-[#008ADA]' : 'text-neutral-500'
+                    index === 0 ? 'text-error' : index === 6 ? 'text-primary-500' : 'text-neutral-500'
                   }`}
                 >
                   {day}
@@ -291,9 +291,9 @@ export default function SelectDoctorAndDatePage() {
                       disabled={!isDateSelectable(day) || !selectedDoctor}
                       className={`w-9 h-9 rounded-full text-sm font-medium transition-all ${
                         isSelectedDate(day)
-                          ? 'bg-[#008ADA] text-white shadow-md'
+                          ? 'bg-primary-500 text-white shadow-md'
                           : isToday(day)
-                          ? 'bg-[#008ADA]/10 text-[#008ADA] font-bold'
+                          ? 'bg-primary-500/10 text-primary-500 font-bold'
                           : isDateSelectable(day) && selectedDoctor
                           ? 'hover:bg-neutral-100 text-neutral-900'
                           : 'text-neutral-300 cursor-not-allowed'

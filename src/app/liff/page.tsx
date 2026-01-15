@@ -164,7 +164,7 @@ export default function LiffEntryPage() {
                 type="button"
                 onClick={handleVerify}
                 disabled={isLoading || inputCode.length !== 4}
-                className="w-full h-12 bg-neutral-800 hover:bg-neutral-900 disabled:bg-neutral-300 text-white font-bold text-base rounded-xl transition-colors"
+                className="w-full h-12 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-300 text-white font-bold text-base rounded-xl transition-colors"
               >
                 {isLoading ? '驗證中...' : '驗證並繼續'}
               </button>

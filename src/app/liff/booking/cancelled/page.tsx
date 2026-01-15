@@ -33,7 +33,7 @@ export default function BookingCancelledPage() {
         <button
           type="button"
           onClick={handleRebook}
-          className="w-full max-w-sm h-12 bg-[#008ADA] hover:bg-[#0076A5] text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all"
+          className="w-full max-w-sm h-12 bg-primary-500 hover:bg-primary-600 text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all"
         >
           重新預約
         </button>

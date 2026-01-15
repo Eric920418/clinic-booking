@@ -231,7 +231,7 @@ export default function VerifyPage() {
                 onChange={(e) => handleCodeChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                className="w-12 h-14 text-center text-2xl font-bold border-2 rounded-xl focus:outline-none focus:border-[#2d5a4e] focus:ring-2 focus:ring-[#2d5a4e]/20 transition-all"
+                className="w-12 h-14 text-center text-2xl font-bold border-2 rounded-xl focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
                 disabled={loading}
               />
             ))}
@@ -242,7 +242,7 @@ export default function VerifyPage() {
             <button
               onClick={() => sendVerificationCode(lineUserId)}
               disabled={countdown > 0 || sending}
-              className="inline-flex items-center text-sm text-[#2d5a4e] font-medium disabled:text-gray-400"
+              className="inline-flex items-center text-sm text-primary-500 font-medium disabled:text-gray-400"
             >
               {sending ? (
                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />

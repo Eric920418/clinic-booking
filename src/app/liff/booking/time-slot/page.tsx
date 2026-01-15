@@ -130,7 +130,7 @@ export default function SelectTimeSlotPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="text-[#008ADA] font-medium"
+          className="text-primary-500 font-medium"
         >
           返回上一頁
         </button>
@@ -169,7 +169,7 @@ export default function SelectTimeSlotPage() {
                     py-3 px-2 rounded-xl border transition-all
                     flex flex-col items-center justify-center
                     ${isSelected
-                      ? 'border-[#008ADA] bg-[#008ADA]/5'
+                      ? 'border-primary-500 bg-primary-500/5'
                       : isDisabled
                       ? 'border-neutral-200 bg-neutral-50'
                       : 'border-neutral-200 bg-white'
@@ -180,7 +180,7 @@ export default function SelectTimeSlotPage() {
                   <span
                     className={`text-base font-medium ${
                       isSelected
-                        ? 'text-[#008ADA]'
+                        ? 'text-primary-500'
                         : isDisabled
                         ? 'text-neutral-400'
                         : 'text-neutral-900'
@@ -188,7 +188,7 @@ export default function SelectTimeSlotPage() {
                   >
                     {slot.time}
                   </span>
-                  <span className={`text-xs mt-1 ${isSelected ? 'text-[#008ADA]' : textColor}`}>
+                  <span className={`text-xs mt-1 ${isSelected ? 'text-primary-500' : textColor}`}>
                     {text}
                   </span>
                 </button>
@@ -205,7 +205,7 @@ export default function SelectTimeSlotPage() {
           type="button"
           onClick={handleConfirm}
           disabled={!selectedSlot}
-          className="w-full h-12 bg-[#008ADA] hover:bg-[#0076A5] disabled:bg-neutral-300 text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all disabled:shadow-none"
+          className="w-full h-12 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-300 text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all disabled:shadow-none"
         >
           確認預約資料
         </button>

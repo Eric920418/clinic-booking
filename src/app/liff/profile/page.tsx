@@ -200,10 +200,10 @@ export default function ProfilePage() {
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               maxLength={5}
-              className={`w-full h-12 px-3 bg-neutral-100 rounded-lg border text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#008ADA]/20 transition-all ${
+              className={`w-full h-12 px-3 bg-neutral-100 rounded-lg border text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all ${
                 errors.name
                   ? 'border-error'
-                  : 'border-neutral-400 focus:border-[#008ADA]'
+                  : 'border-neutral-400 focus:border-primary-500'
               }`}
             />
             {errors.name && (
@@ -224,10 +224,10 @@ export default function ProfilePage() {
               placeholder="0905-123-123"
               value={formData.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
-              className={`w-full h-12 px-3 bg-neutral-100 rounded-lg border text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#008ADA]/20 transition-all ${
+              className={`w-full h-12 px-3 bg-neutral-100 rounded-lg border text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all ${
                 errors.phone
                   ? 'border-error'
-                  : 'border-neutral-400 focus:border-[#008ADA]'
+                  : 'border-neutral-400 focus:border-primary-500'
               }`}
             />
             {errors.phone && (
@@ -248,10 +248,10 @@ export default function ProfilePage() {
               value={formData.idNumber}
               onChange={(e) => handleChange('idNumber', e.target.value)}
               maxLength={10}
-              className={`w-full h-12 px-3 bg-neutral-100 rounded-lg border text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#008ADA]/20 transition-all ${
+              className={`w-full h-12 px-3 bg-neutral-100 rounded-lg border text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all ${
                 errors.idNumber
                   ? 'border-error'
-                  : 'border-neutral-400 focus:border-[#008ADA]'
+                  : 'border-neutral-400 focus:border-primary-500'
               }`}
             />
             {errors.idNumber && (
@@ -273,10 +273,10 @@ export default function ProfilePage() {
               value={formData.birthDate}
               onChange={(e) => handleChange('birthDate', e.target.value)}
               maxLength={7}
-              className={`w-full h-12 px-3 bg-neutral-100 rounded-lg border text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#008ADA]/20 transition-all ${
+              className={`w-full h-12 px-3 bg-neutral-100 rounded-lg border text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all ${
                 errors.birthDate
                   ? 'border-error'
-                  : 'border-neutral-400 focus:border-[#008ADA]'
+                  : 'border-neutral-400 focus:border-primary-500'
               }`}
             />
             {errors.birthDate && (
@@ -296,7 +296,7 @@ export default function ProfilePage() {
           type="button"
           onClick={handleSubmit}
           disabled={isLoading}
-          className="w-full h-12 bg-[#008ADA] hover:bg-[#0076A5] disabled:bg-neutral-300 text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all disabled:shadow-none"
+          className="w-full h-12 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-300 text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all disabled:shadow-none"
         >
           {isLoading ? '處理中...' : '下一步'}
         </button>

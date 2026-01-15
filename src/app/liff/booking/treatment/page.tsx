@@ -61,7 +61,7 @@ export default function SelectTreatmentPage() {
                 onClick={() => handleSelectTreatment(treatment.id)}
                 className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${
                   selectedTreatment === treatment.id
-                    ? 'border-[#008ADA] bg-[#008ADA]/5'
+                    ? 'border-primary-500 bg-primary-500/5'
                     : 'border-neutral-400 bg-white'
                 }`}
               >
@@ -74,7 +74,7 @@ export default function SelectTreatmentPage() {
                   </div>
                 </div>
                 {selectedTreatment === treatment.id ? (
-                  <CheckCircle2 className="w-6 h-6 text-[#008ADA]" />
+                  <CheckCircle2 className="w-6 h-6 text-primary-500" />
                 ) : (
                   <Circle className="w-6 h-6 text-neutral-300" />
                 )}
@@ -91,7 +91,7 @@ export default function SelectTreatmentPage() {
           type="button"
           onClick={handleQueryTimeSlots}
           disabled={!selectedTreatment}
-          className="w-full h-12 bg-[#008ADA] hover:bg-[#0076A5] disabled:bg-neutral-300 text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all disabled:shadow-none"
+          className="w-full h-12 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-300 text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all disabled:shadow-none"
         >
           查詢可預約時段
         </button>
