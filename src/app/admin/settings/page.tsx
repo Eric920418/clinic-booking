@@ -787,7 +787,7 @@ export default function SettingsPage() {
               </h2>
 
               {/* 新增帳號表單 */}
-              <div className="flex items-end gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 {/* 帳戶名稱 */}
                 <div className="w-56">
                   <label className="text-sm text-neutral-500 mb-1 block">
