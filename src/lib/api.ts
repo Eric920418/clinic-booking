@@ -74,6 +74,7 @@ export interface DashboardData {
   summary: DashboardSummary;
   doctors: Doctor[];
   appointments: Appointment[];
+  selectedDoctorId: string | null; // API 自動選擇的醫師 ID
 }
 
 // ==================== Hooks ====================

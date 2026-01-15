@@ -23,30 +23,27 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
     const today = new Date();
     const weekAgo = subDays(today, 6);
 
-    // 過去 7 天預約趨勢
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        createdAt: {
-          gte: startOfDay(weekAgo),
-          lte: endOfDay(today),
-        },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
+    // 使用 SQL GROUP BY 直接在數據庫層分組，避免傳輸大量數據到應用層
+    const dbResults = await prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+      SELECT DATE("createdAt") as date, COUNT(*) as count
+      FROM "Appointment"
+      WHERE "createdAt" >= ${startOfDay(weekAgo)} AND "createdAt" <= ${endOfDay(today)}
+      GROUP BY DATE("createdAt")
+      ORDER BY date
+    `;
 
-    // 按日期分組統計
+    // 建立日期對應表（確保即使某天沒有預約也會顯示 0）
     const dailyCounts: Record<string, number> = {};
     for (let i = 0; i < 7; i++) {
       const date = format(subDays(today, 6 - i), 'yyyy-MM-dd');
       dailyCounts[date] = 0;
     }
 
-    appointments.forEach((appt) => {
-      const date = format(appt.createdAt, 'yyyy-MM-dd');
+    // 填入數據庫查詢結果
+    dbResults.forEach((row) => {
+      const date = format(row.date, 'yyyy-MM-dd');
       if (dailyCounts[date] !== undefined) {
-        dailyCounts[date]++;
+        dailyCounts[date] = Number(row.count);
       }
     });
 
@@ -55,10 +52,14 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
       count,
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: weeklyStats,
     });
+
+    // 緩存 30 秒，週統計數據不需要即時更新
+    response.headers.set('Cache-Control', 'private, s-maxage=30, stale-while-revalidate=60');
+    return response;
 
   } catch (error) {
     console.error('[GET /api/admin/dashboard/weekly]', error);

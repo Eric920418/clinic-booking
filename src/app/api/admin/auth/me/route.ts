@@ -31,7 +31,7 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
       }, { status: 403 });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         id: admin.id,
@@ -42,6 +42,10 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
         timezone: admin.timezone,
       },
     });
+
+    // 私有緩存 60 秒，減少重複認證查詢
+    response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
+    return response;
 
   } catch (error) {
     console.error('[GET /api/admin/auth/me]', error);

@@ -69,11 +69,26 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const [appointments, total] = await Promise.all([
       prisma.appointment.findMany({
         where,
-        include: {
-          patient: true,
-          doctor: true,
-          treatmentType: true,
-          timeSlot: true,
+        select: {
+          id: true,
+          appointmentDate: true,
+          status: true,
+          createdAt: true,
+          patient: {
+            select: {
+              name: true,
+              phone: true,
+            },
+          },
+          doctor: {
+            select: { name: true },
+          },
+          treatmentType: {
+            select: { name: true },
+          },
+          timeSlot: {
+            select: { startTime: true, endTime: true },
+          },
         },
         orderBy: { appointmentDate: 'desc' },
         skip: (page - 1) * limit,

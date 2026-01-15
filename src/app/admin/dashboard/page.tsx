@@ -68,15 +68,17 @@ export default function DashboardPage() {
   const appointments = (data?.appointments || []) as DashboardAppointment[];
   const summary = data?.summary || { todayBooked: 0, todayCompleted: 0, todayCancelled: 0, todayCheckedIn: 0, todayNoShow: 0 };
 
-  // 找到選中的醫師
-  const selectedDoctor = doctors.find((d: Doctor) => d.id === selectedDoctorId) || null;
-
-  // 首次載入時，自動選擇第一個醫師
+  // 從 API 返回的 selectedDoctorId 同步到 state（只在首次載入時）
+  // 這樣避免了瀑布式請求：API 自動選擇第一個醫師，前端只需同步
   useEffect(() => {
-    if (doctors.length > 0 && !selectedDoctorId) {
-      setSelectedDoctorId(doctors[0].id);
+    if (data?.selectedDoctorId && !selectedDoctorId) {
+      setSelectedDoctorId(data.selectedDoctorId);
     }
-  }, [doctors, selectedDoctorId]);
+  }, [data?.selectedDoctorId, selectedDoctorId]);
+
+  // 找到選中的醫師（使用 API 返回的或用戶選擇的）
+  const effectiveDoctorId = selectedDoctorId || data?.selectedDoctorId;
+  const selectedDoctor = doctors.find((d: Doctor) => d.id === effectiveDoctorId) || null;
 
   // Modal 狀態
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

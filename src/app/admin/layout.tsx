@@ -4,9 +4,10 @@
  */
 'use client';
 
-import { type ReactNode, useState, useEffect } from 'react';
+import { type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import useSWR from 'swr';
 import {
   LayoutDashboard,
   Clock,
@@ -26,30 +27,29 @@ const NAV_ITEMS = [
   { href: '/admin/settings', label: '系統設定', icon: Settings },
 ];
 
+// SWR fetcher for auth
+const authFetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json.success ? json.data : null;
+};
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<{ name: string } | null>(null);
   const isLoginPage = pathname === '/admin/login';
 
-  useEffect(() => {
-    // 登入頁面不需要取得用戶
-    if (isLoginPage) return;
-
-    // 取得當前用戶（簡化版，實際應從 API 取得）
-    const fetchUser = async () => {
-      try {
-        const res = await fetch('/api/admin/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.data);
-        }
-      } catch {
-        // ignore
-      }
-    };
-    fetchUser();
-  }, [isLoginPage]);
+  // 使用 SWR 緩存用戶資料，避免每次都重新請求
+  const { data: user } = useSWR<{ name: string } | null>(
+    isLoginPage ? null : '/api/admin/auth/me',
+    authFetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000, // 60 秒內不重複請求
+    }
+  );
 
   // 登入頁面不顯示 sidebar
   if (isLoginPage) {

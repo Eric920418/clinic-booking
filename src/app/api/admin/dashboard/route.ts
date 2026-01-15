@@ -21,26 +21,28 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     }
 
     const { searchParams } = new URL(request.url);
-    const doctorId = searchParams.get('doctorId');
+    const requestedDoctorId = searchParams.get('doctorId');
 
     const today = new Date();
     const todayStart = startOfDay(today);
     const todayEnd = endOfDay(today);
 
-    // 並行查詢所有資料
+    // 先查詢醫師列表（需要用來決定預設醫師）
+    const doctors = await prisma.doctor.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+
+    // 如果沒有指定醫師，自動使用第一個醫師（消除前端瀑布式請求）
+    const doctorId = requestedDoctorId || (doctors.length > 0 ? doctors[0].id : null);
+
+    // 並行查詢其他資料
     const [
-      doctors,
       todayAppointmentsGrouped,
       todayAppointments,
     ] = await Promise.all([
-      // 1. 醫師列表
-      prisma.doctor.findMany({
-        where: { isActive: true },
-        select: { id: true, name: true },
-        orderBy: { name: 'asc' },
-      }),
-
-      // 2. 今日統計（按狀態分組）
+      // 1. 今日統計（按狀態分組）
       prisma.appointment.groupBy({
         by: ['status'],
         where: {
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         _count: true,
       }),
 
-      // 3. 今日預約列表
+      // 2. 今日預約列表（使用 select 而非 include 減少數據傳輸）
       prisma.appointment.findMany({
         where: {
           appointmentDate: {
@@ -61,7 +63,12 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
           },
           ...(doctorId ? { doctorId } : {}),
         },
-        include: {
+        select: {
+          id: true,
+          doctorId: true,
+          treatmentTypeId: true,
+          appointmentDate: true,
+          status: true,
           patient: {
             select: {
               name: true,
@@ -124,6 +131,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         },
         doctors,
         appointments,
+        selectedDoctorId: doctorId, // 返回實際使用的醫師 ID，讓前端同步
       },
     });
 

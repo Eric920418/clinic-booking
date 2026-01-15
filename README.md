@@ -539,14 +539,25 @@ tests/e2e/
 
 ## 效能優化
 
+### 消除瀑布式請求
+
+Dashboard 頁面優化：API 自動選擇第一個醫師，前端只需同步 `selectedDoctorId`，避免等待醫師列表載入後才請求 Dashboard 資料的瀑布式延遲。
+
+Admin Layout 優化：使用 SWR 緩存用戶認證資料（60 秒內不重複請求），避免每次頁面切換都重新調用認證 API。
+
 ### 合併 API
 
 為減少網路請求次數，後台頁面使用合併 API：
 
 | 頁面 | API 端點 | 說明 |
 |------|----------|------|
-| Dashboard | `GET /api/admin/dashboard` | 合併醫師、統計、今日預約 |
+| Dashboard | `GET /api/admin/dashboard` | 合併醫師、統計、今日預約，自動選擇預設醫師 |
 | Settings | `GET /api/admin/settings` | 合併醫師、診療項目、帳號 |
+
+### Prisma 查詢優化
+
+- 使用 `select` 代替 `include: true`，只查詢需要的欄位
+- 週統計使用 SQL `GROUP BY` 在資料庫層分組，減少數據傳輸
 
 ### SWR Hooks
 
@@ -575,7 +586,9 @@ API 路由設置 Cache-Control headers 以減少 Vercel serverless 冷啟動延�
 |-----|------------|------|
 | `/api/liff/doctors` | `s-maxage=60, stale-while-revalidate=120` | 醫師列表不常變化 |
 | `/api/liff/treatment-types` | `s-maxage=60, stale-while-revalidate=120` | 診療項目不常變化 |
+| `/api/admin/auth/me` | `max-age=60, stale-while-revalidate=120` | 認證資料私有緩存 |
 | `/api/admin/dashboard` | `s-maxage=15, stale-while-revalidate=30` | Dashboard 資料短期緩存 |
+| `/api/admin/dashboard/weekly` | `s-maxage=30, stale-while-revalidate=60` | 週統計不需即時更新 |
 | `/api/admin/settings` | `s-maxage=30, stale-while-revalidate=60` | 設定資料中期緩存 |
 | `/api/admin/appointments` | `s-maxage=10, stale-while-revalidate=30` | 預約資料頻繁變化，短期緩存 |
 
