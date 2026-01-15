@@ -185,7 +185,7 @@ export default function PatientsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="查詢患者"
-              className="w-full h-11 pl-10 pr-4 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
+              className="w-full h-11 pl-12 pr-4 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
             />
           </div>
         </div>
@@ -194,12 +194,12 @@ export default function PatientsPage() {
         <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50">
+              <tr className="">
                 <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">患者名字</th>
                 <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">基本資料</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">預約次數</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">備註</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4">操作</th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4 w-24">預約次數</th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4 w-1/3">備註</th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-6 py-4 w-20">操作</th>
               </tr>
             </thead>
             <tbody>
