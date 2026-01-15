@@ -8,6 +8,7 @@
 |------|----------|
 | 前端框架 | Next.js 16+ (App Router) |
 | UI 元件 | React 19+ / Tailwind CSS / shadcn/ui |
+| 資料快取 | SWR (stale-while-revalidate) |
 | 部署平台 | Vercel |
 | 資料庫 | Supabase PostgreSQL |
 | 即時更新 | Supabase Realtime |
@@ -219,6 +220,9 @@ app/
 │
 ├── components/             # React 元件
 ├── lib/                    # 業務邏輯與工具函式
+│   ├── api.ts             # SWR hooks（useDashboard, useSettings 等）
+│   ├── auth.ts            # 認證邏輯
+│   └── prisma.ts          # Prisma Client
 └── types/                  # TypeScript 型別定義
 ```
 
@@ -532,6 +536,36 @@ tests/e2e/
 | 黑名單 - 加入黑名單 | `POST /api/admin/blacklist` |
 | 黑名單 - 移除黑名單 | `DELETE /api/admin/blacklist/{patientId}` |
 | 即時更新 - 取得可預約時段 | `GET /api/slots?date=YYYY-MM-DD&doctor_id=xxx` |
+
+## 效能優化
+
+### 合併 API
+
+為減少網路請求次數，後台頁面使用合併 API：
+
+| 頁面 | API 端點 | 說明 |
+|------|----------|------|
+| Dashboard | `GET /api/admin/dashboard` | 合併醫師、統計、今日預約 |
+| Settings | `GET /api/admin/settings` | 合併醫師、診療項目、帳號 |
+
+### SWR Hooks
+
+`src/lib/api.ts` 提供 SWR hooks，統一管理資料獲取與快取：
+
+```typescript
+import { useDashboard, useSettings, useDoctors, useTreatmentTypes } from '@/lib/api';
+
+// Dashboard 頁面
+const { data, error, isLoading, mutate } = useDashboard(doctorId);
+
+// Settings 頁面
+const { data, error, isLoading, mutate } = useSettings();
+```
+
+SWR 預設配置：
+- `revalidateOnFocus: false` - 視窗聚焦時不重新驗證
+- `dedupingInterval: 5000` - 5 秒內重複請求會被合併
+- `errorRetryCount: 2` - 錯誤重試 2 次
 
 ## 規格文件
 

@@ -1,20 +1,22 @@
 /**
  * 系統設定頁面
  * 包含帳號權限管理和診療資源管理
+ * 使用 SWR 進行資料快取和即時更新
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Trash2, Pencil, ChevronDown, MoreVertical } from 'lucide-react';
 import EditTreatmentModal from '@/components/admin/EditTreatmentModal';
 import DeleteDoctorModal from '@/components/admin/DeleteDoctorModal';
 import EditAccountModal from '@/components/admin/EditAccountModal';
 import AddAppointmentModal from '@/components/admin/AddAppointmentModal';
+import { useSettings } from '@/lib/api';
 
 // 分頁類型
 type TabType = 'accounts' | 'resources';
 
-// 醫師型別
+// 醫師型別（本地使用）
 interface Doctor {
   id: string;
   name: string;
@@ -22,14 +24,14 @@ interface Doctor {
   minutesPerSlot: number;
 }
 
-// 診療項目型別
+// 診療項目型別（本地使用）
 interface Treatment {
   id: string;
   name: string;
   minutes: number;
 }
 
-// 帳號型別
+// 帳號型別（本地使用）
 interface Account {
   id: string;
   username: string;
@@ -48,22 +50,60 @@ const ROLE_OPTIONS = [
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('resources');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  // 使用 SWR hook 獲取設定資料（包含醫師、診療項目、帳號）
+  const { data, error: swrError, isLoading, mutate } = useSettings();
+
+  // 轉換 API 資料為本地格式
+  const doctors: Doctor[] = useMemo(() =>
+    (data?.doctors || []).map(d => ({
+      id: d.id,
+      name: d.name,
+      treatments: [], // API 未返回關聯
+      minutesPerSlot: 30,
+    })),
+    [data?.doctors]
+  );
+
+  const treatments: Treatment[] = useMemo(() =>
+    (data?.treatmentTypes || []).map(t => ({
+      id: t.id,
+      name: t.name,
+      minutes: t.durationMinutes,
+    })),
+    [data?.treatmentTypes]
+  );
+
+  const accounts: Account[] = useMemo(() =>
+    (data?.accounts || []).map(a => ({
+      id: a.id,
+      username: a.email,
+      role: a.role,
+    })),
+    [data?.accounts]
+  );
+
+  // 項目選項（從 API 取得的診療項目）
+  const treatmentOptions = useMemo(() =>
+    (data?.treatmentTypes || []).map(t => ({
+      value: t.id,
+      label: t.name,
+    })),
+    [data?.treatmentTypes]
+  );
+
+  // 合併錯誤訊息
+  const error = localError || (swrError ? swrError.message : null);
 
   // 醫師表單狀態
   const [doctorName, setDoctorName] = useState('');
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const [doctorMinutes, setDoctorMinutes] = useState(30);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
 
   // 診療項目表單狀態
   const [treatmentName, setTreatmentName] = useState('');
   const [treatmentMinutes, setTreatmentMinutes] = useState(5);
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
-
-  // 項目選項（從 API 取得的診療項目）
-  const [treatmentOptions, setTreatmentOptions] = useState<{ value: string; label: string }[]>([]);
 
   // 下拉選單狀態
   const [showTreatmentDropdown, setShowTreatmentDropdown] = useState(false);
@@ -86,7 +126,6 @@ export default function SettingsPage() {
   const [accountUsername, setAccountUsername] = useState('');
   const [accountPassword, setAccountPassword] = useState('');
   const [accountRole, setAccountRole] = useState('staff');
-  const [accounts, setAccounts] = useState<Account[]>([]);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [activeAccountMenu, setActiveAccountMenu] = useState<string | null>(null);
 
@@ -100,70 +139,6 @@ export default function SettingsPage() {
 
   // 新增預約 Modal 狀態
   const [isAddAppointmentModalOpen, setIsAddAppointmentModalOpen] = useState(false);
-
-  // 載入資料
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // 並行載入醫師、診療項目、帳號資料
-        const [doctorsRes, treatmentsRes, accountsRes] = await Promise.all([
-          fetch('/api/liff/doctors'),
-          fetch('/api/liff/treatment-types'),
-          fetch('/api/admin/accounts'),
-        ]);
-
-        // 處理醫師資料
-        if (doctorsRes.ok) {
-          const doctorsData = await doctorsRes.json();
-          if (doctorsData.success && doctorsData.data) {
-            setDoctors(doctorsData.data.map((d: { id: string; name: string; treatmentTypes?: { name: string }[] }) => ({
-              id: d.id,
-              name: d.name,
-              treatments: d.treatmentTypes?.map((t: { name: string }) => t.name) || [],
-              minutesPerSlot: 30, // 預設值
-            })));
-          }
-        }
-
-        // 處理診療項目資料
-        if (treatmentsRes.ok) {
-          const treatmentsData = await treatmentsRes.json();
-          if (treatmentsData.success && treatmentsData.data) {
-            setTreatments(treatmentsData.data.map((t: { id: string; name: string; durationMinutes: number }) => ({
-              id: t.id,
-              name: t.name,
-              minutes: t.durationMinutes,
-            })));
-            setTreatmentOptions(treatmentsData.data.map((t: { id: string; name: string }) => ({
-              value: t.id,
-              label: t.name,
-            })));
-          }
-        }
-
-        // 處理帳號資料
-        if (accountsRes.ok) {
-          const accountsData = await accountsRes.json();
-          if (accountsData.success && accountsData.data) {
-            setAccounts(accountsData.data.map((a: { id: string; email: string; role: string }) => ({
-              id: a.id,
-              username: a.email,
-              role: a.role,
-            })));
-          }
-        }
-      } catch (err) {
-        console.error('載入設定資料失敗:', err);
-        setError('載入設定資料失敗，請重新整理頁面');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
 
   // 新增醫師
   const handleAddDoctor = async () => {
@@ -179,26 +154,16 @@ export default function SettingsPage() {
       const result = await response.json();
 
       if (result.success && result.data) {
-        const newDoctor: Doctor = {
-          id: result.data.id,
-          name: result.data.name,
-          treatments: selectedTreatments.map(
-            (t) => treatmentOptions.find((opt) => opt.value === t)?.label || t
-          ),
-          minutesPerSlot: doctorMinutes,
-        };
-        setDoctors([...doctors, newDoctor]);
         setDoctorName('');
         setSelectedTreatments([]);
-
-        // TODO: 呼叫 API 設定醫師的診療項目
-        // POST /api/admin/doctors/{id}/treatments
+        // 重新獲取資料
+        await mutate();
       } else {
-        setError(result.error?.message || '新增醫師失敗');
+        setLocalError(result.error?.message || '新增醫師失敗');
       }
     } catch (err) {
       console.error('新增醫師失敗:', err);
-      setError('新增醫師失敗');
+      setLocalError('新增醫師失敗');
     }
   };
 
@@ -220,13 +185,14 @@ export default function SettingsPage() {
         const result = await response.json();
 
         if (result.success) {
-          setDoctors(doctors.filter((d) => d.id !== deletingDoctorId));
+          // 重新獲取資料
+          await mutate();
         } else {
-          setError(result.error?.message || '停用醫師失敗');
+          setLocalError(result.error?.message || '停用醫師失敗');
         }
       } catch (err) {
         console.error('停用醫師失敗:', err);
-        setError('停用醫師失敗');
+        setLocalError('停用醫師失敗');
       }
     }
     setIsDeleteDoctorModalOpen(false);
@@ -238,21 +204,15 @@ export default function SettingsPage() {
   const handleAddTreatment = async () => {
     if (!treatmentName.trim()) return;
 
-    // 目前後端沒有新增診療項目的 API，暫時只做本地更新
-    const newTreatment: Treatment = {
-      id: Date.now().toString(),
-      name: treatmentName,
-      minutes: treatmentMinutes,
-    };
-    setTreatments([...treatments, newTreatment]);
-    setTreatmentName('');
-
-    // TODO: 呼叫真實 API
+    // TODO: 呼叫真實 API 後再 mutate()
     // const response = await fetch('/api/admin/treatments', {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
     //   body: JSON.stringify({ name: treatmentName, durationMinutes: treatmentMinutes }),
     // });
+    // if (response.ok) await mutate();
+
+    setTreatmentName('');
   };
 
   // 編輯診療項目
@@ -262,27 +222,26 @@ export default function SettingsPage() {
   };
 
   // 儲存診療項目
-  const handleSaveTreatment = async (data: { id: string; name: string; minutes: number }) => {
+  const handleSaveTreatment = async (treatmentData: { id: string; name: string; minutes: number }) => {
     try {
       // 呼叫 API 更新診療項目
-      const response = await fetch(`/api/admin/treatments/${data.id}`, {
+      const response = await fetch(`/api/admin/treatments/${treatmentData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ durationMinutes: data.minutes }),
+        body: JSON.stringify({ durationMinutes: treatmentData.minutes }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        setTreatments((prev) =>
-          prev.map((t) => (t.id === data.id ? { ...t, name: data.name, minutes: data.minutes } : t))
-        );
+        // 重新獲取資料
+        await mutate();
       } else {
-        setError(result.error?.message || '更新診療項目失敗');
+        setLocalError(result.error?.message || '更新診療項目失敗');
       }
     } catch (err) {
       console.error('更新診療項目失敗:', err);
-      setError('更新診療項目失敗');
+      setLocalError('更新診療項目失敗');
     }
   };
 
@@ -297,13 +256,14 @@ export default function SettingsPage() {
       const result = await response.json();
 
       if (result.success) {
-        setTreatments((prev) => prev.filter((t) => t.id !== id));
+        // 重新獲取資料
+        await mutate();
       } else {
-        setError(result.error?.message || '停用診療項目失敗');
+        setLocalError(result.error?.message || '停用診療項目失敗');
       }
     } catch (err) {
       console.error('停用診療項目失敗:', err);
-      setError('停用診療項目失敗');
+      setLocalError('停用診療項目失敗');
     }
   };
 
@@ -333,21 +293,17 @@ export default function SettingsPage() {
       const result = await response.json();
 
       if (result.success && result.data) {
-        const newAccount: Account = {
-          id: result.data.id,
-          username: result.data.email,
-          role: result.data.role,
-        };
-        setAccounts([...accounts, newAccount]);
         setAccountUsername('');
         setAccountPassword('');
         setAccountRole('staff');
+        // 重新獲取資料
+        await mutate();
       } else {
-        setError(result.error?.message || result.error || '新增帳號失敗');
+        setLocalError(result.error?.message || result.error || '新增帳號失敗');
       }
     } catch (err) {
       console.error('新增帳號失敗:', err);
-      setError('新增帳號失敗');
+      setLocalError('新增帳號失敗');
     }
   };
 
@@ -361,13 +317,14 @@ export default function SettingsPage() {
       const result = await response.json();
 
       if (result.success) {
-        setAccounts(accounts.filter((a) => a.id !== id));
+        // 重新獲取資料
+        await mutate();
       } else {
-        setError(result.error?.message || '停用帳號失敗');
+        setLocalError(result.error?.message || '停用帳號失敗');
       }
     } catch (err) {
       console.error('停用帳號失敗:', err);
-      setError('停用帳號失敗');
+      setLocalError('停用帳號失敗');
     }
     setActiveAccountMenu(null);
   };
@@ -381,11 +338,10 @@ export default function SettingsPage() {
 
   // 儲存帳號
   // TODO: 需要後端實作 PUT /api/admin/accounts/{id} API 來更新帳號
-  const handleSaveAccount = async (data: { id: string; username: string; role: string; newPassword?: string }) => {
-    // 目前後端沒有更新帳號的 API，暫時只做本地更新
-    setAccounts((prev) =>
-      prev.map((a) => (a.id === data.id ? { ...a, username: data.username, role: data.role } : a))
-    );
+  const handleSaveAccount = async (_accountData: { id: string; username: string; role: string; newPassword?: string }) => {
+    // TODO: 呼叫真實 API 後再 mutate()
+    // const response = await fetch(`/api/admin/accounts/${accountData.id}`, { ... });
+    // if (response.ok) await mutate();
   };
 
   // 取得權限標籤
@@ -393,8 +349,8 @@ export default function SettingsPage() {
     return ROLE_OPTIONS.find((r) => r.value === role)?.label || role;
   };
 
-  // 載入中或錯誤狀態
-  if (loading) {
+  // 載入中狀態
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-neutral-500">載入中...</div>
@@ -409,7 +365,7 @@ export default function SettingsPage() {
         <div className="fixed top-4 right-4 z-50 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg shadow-lg">
           {error}
           <button
-            onClick={() => setError(null)}
+            onClick={() => setLocalError(null)}
             className="ml-4 text-red-400 hover:text-red-600"
           >
             &times;

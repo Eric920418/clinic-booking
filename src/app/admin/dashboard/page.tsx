@@ -1,6 +1,7 @@
 /**
  * 管理後台 Dashboard - 數據概覽
  * 顯示今日預約統計和預約列表
+ * 使用 SWR 進行資料快取和即時更新
  */
 'use client';
 
@@ -14,25 +15,24 @@ import {
   Pencil,
 } from 'lucide-react';
 import EditPatientModal from '@/components/admin/EditPatientModal';
+import { useDashboard, type Doctor } from '@/lib/api';
 
-// 醫師類型
-interface Doctor {
+// 預約類型（從 API 返回的格式）
+interface DashboardAppointment {
   id: string;
-  name: string;
-}
-
-// 預約類型
-interface Appointment {
-  id: string;
-  time: string;
-  date: string;
   patientName: string;
-  idNumber: string;
-  birthDate: string;
-  phone: string;
+  patientPhone: string;
+  patientNationalId: string;
+  patientBirthDate: string;
+  patientNotes: string;
+  doctor: string;
+  doctorId: string;
   treatmentType: string;
+  treatmentTypeId: string;
+  appointmentDate: string;
+  startTime: string;
+  endTime: string;
   status: string;
-  note: string;
 }
 
 // 狀態對應
@@ -57,120 +57,30 @@ interface PatientData {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(undefined);
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [stats, setStats] = useState({
-    booked: 0,
-    completed: 0,
-    cancelled: 0,
-  });
 
-  // 載入狀態
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // 使用 SWR hook 獲取 Dashboard 資料（包含醫師、統計、預約）
+  const { data, error, isLoading, mutate } = useDashboard(selectedDoctorId);
+
+  // 從 data 中解構資料
+  const doctors = data?.doctors || [];
+  const appointments = (data?.appointments || []) as DashboardAppointment[];
+  const summary = data?.summary || { todayBooked: 0, todayCompleted: 0, todayCancelled: 0, todayCheckedIn: 0, todayNoShow: 0 };
+
+  // 找到選中的醫師
+  const selectedDoctor = doctors.find((d: Doctor) => d.id === selectedDoctorId) || null;
+
+  // 首次載入時，自動選擇第一個醫師
+  useEffect(() => {
+    if (doctors.length > 0 && !selectedDoctorId) {
+      setSelectedDoctorId(doctors[0].id);
+    }
+  }, [doctors, selectedDoctorId]);
 
   // Modal 狀態
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<PatientData | null>(null);
-
-  // 初始載入：並行請求醫師列表和統計數據
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const [doctorsRes, summaryRes] = await Promise.all([
-          fetch('/api/liff/doctors'),
-          fetch('/api/admin/dashboard/summary'),
-        ]);
-
-        const [doctorsData, summaryData] = await Promise.all([
-          doctorsRes.json(),
-          summaryRes.json(),
-        ]);
-
-        // 設置醫師列表
-        if (doctorsData.success && doctorsData.data) {
-          const doctorList = doctorsData.data.map((d: { id: string; name: string }) => ({
-            id: d.id,
-            name: d.name,
-          }));
-          setDoctors(doctorList);
-          if (doctorList.length > 0) {
-            setSelectedDoctor(doctorList[0]);
-          }
-        }
-
-        // 設置統計數據
-        if (summaryData.success && summaryData.data) {
-          setStats({
-            booked: summaryData.data.todayBooked || 0,
-            completed: summaryData.data.todayCompleted || 0,
-            cancelled: summaryData.data.todayCancelled || 0,
-          });
-        }
-      } catch (err) {
-        console.error('載入資料失敗:', err);
-        setError('載入資料失敗');
-      }
-    };
-    fetchInitialData();
-  }, []);
-
-  // 載入今日預約列表
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      setLoading(true);
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const params = new URLSearchParams({
-          dateFrom: today,
-          dateTo: today,
-        });
-        if (selectedDoctor?.id) {
-          params.append('doctorId', selectedDoctor.id);
-        }
-
-        const response = await fetch(`/api/admin/appointments?${params}`);
-        const result = await response.json();
-
-        if (result.success && result.data?.items) {
-          const appointmentList = result.data.items.map((item: {
-            id: string;
-            startTime: string;
-            appointmentDate: string;
-            patientName: string;
-            patientPhone: string;
-            treatmentType: string;
-            status: string;
-          }) => ({
-            id: item.id,
-            time: item.startTime,
-            date: item.appointmentDate,
-            patientName: item.patientName,
-            idNumber: '', // API 未返回
-            birthDate: '', // API 未返回
-            phone: item.patientPhone || '',
-            treatmentType: item.treatmentType,
-            status: item.status,
-            note: '', // API 未返回
-          }));
-          setAppointments(appointmentList);
-        } else {
-          setAppointments([]);
-        }
-        setError(null);
-      } catch (err) {
-        console.error('載入預約列表失敗:', err);
-        setError('載入預約列表失敗');
-        setAppointments([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAppointments();
-  }, [selectedDoctor]);
 
   // 新增預約
   const handleNewAppointment = () => {
@@ -178,37 +88,24 @@ export default function DashboardPage() {
   };
 
   // 編輯預約 - 開啟 Modal
-  const handleEditAppointment = (appointment: Appointment) => {
+  const handleEditAppointment = (appointment: DashboardAppointment) => {
     setEditingPatient({
       id: appointment.id,
       name: appointment.patientName,
-      phone: appointment.phone,
-      idNumber: appointment.idNumber,
-      birthDate: appointment.birthDate,
-      treatmentType: appointment.treatmentType === '內科' ? 'internal' : appointment.treatmentType === '初診' ? 'first_visit' : 'acupuncture',
-      note: appointment.note,
+      phone: appointment.patientPhone,
+      idNumber: appointment.patientNationalId,
+      birthDate: appointment.patientBirthDate,
+      treatmentType: appointment.treatmentTypeId,
+      note: appointment.patientNotes,
     });
     setIsEditModalOpen(true);
   };
 
   // 儲存患者資料
-  const handleSavePatient = async (data: PatientData) => {
+  const handleSavePatient = async (patientData: PatientData) => {
     // TODO: 呼叫 API 更新患者資料
-    setAppointments((prev) =>
-      prev.map((apt) =>
-        apt.id === data.id
-          ? {
-              ...apt,
-              patientName: data.name,
-              phone: data.phone,
-              idNumber: data.idNumber,
-              birthDate: data.birthDate,
-              treatmentType: data.treatmentType === 'internal' ? '內科' : data.treatmentType === 'first_visit' ? '初診' : '針灸',
-              note: data.note,
-            }
-          : apt
-      )
-    );
+    // 更新後重新獲取資料
+    await mutate();
   };
 
   // 刪除預約
@@ -218,7 +115,8 @@ export default function DashboardPage() {
         method: 'DELETE',
       });
       if (response.ok) {
-        setAppointments((prev) => prev.filter((apt) => apt.id !== id));
+        // 刪除後重新獲取資料
+        await mutate();
       }
     } catch (err) {
       console.error('刪除預約失敗:', err);
@@ -244,7 +142,7 @@ export default function DashboardPage() {
         {/* 錯誤提示 */}
         {error && (
           <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg text-error">
-            {error}
+            {error.message || '載入資料失敗'}
           </div>
         )}
 
@@ -270,7 +168,7 @@ export default function DashboardPage() {
                         key={doctor.id}
                         type="button"
                         onClick={() => {
-                          setSelectedDoctor(doctor);
+                          setSelectedDoctorId(doctor.id);
                           setShowDoctorDropdown(false);
                         }}
                         className="w-full px-3 py-2 flex items-center gap-2 text-sm hover:bg-neutral-50"
@@ -303,7 +201,7 @@ export default function DashboardPage() {
                   <div className="w-1 h-5 bg-primary rounded-full" />
                   <span className="text-sm text-neutral-600">今日已預約</span>
                 </div>
-                <div className="text-4xl font-bold text-neutral-900">{stats.booked}</div>
+                <div className="text-4xl font-bold text-neutral-900">{summary.todayBooked}</div>
               </div>
               <Calendar className="w-6 h-6 text-neutral-300" />
             </div>
@@ -317,7 +215,7 @@ export default function DashboardPage() {
                   <div className="w-1 h-5 bg-success rounded-full" />
                   <span className="text-sm text-neutral-600">今日已完成</span>
                 </div>
-                <div className="text-4xl font-bold text-neutral-900">{stats.completed}</div>
+                <div className="text-4xl font-bold text-neutral-900">{summary.todayCompleted}</div>
               </div>
               <CheckCircle className="w-6 h-6 text-neutral-300" />
             </div>
@@ -331,7 +229,7 @@ export default function DashboardPage() {
                   <div className="w-1 h-5 bg-error rounded-full" />
                   <span className="text-sm text-neutral-600">今日已取消</span>
                 </div>
-                <div className="text-4xl font-bold text-neutral-900">{stats.cancelled}</div>
+                <div className="text-4xl font-bold text-neutral-900">{summary.todayCancelled}</div>
               </div>
               <XCircle className="w-6 h-6 text-neutral-300" />
             </div>
@@ -353,7 +251,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {isLoading ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-neutral-500">
                     載入中...
@@ -371,21 +269,21 @@ export default function DashboardPage() {
                   return (
                     <tr key={appointment.id} className="border-b border-neutral-100 last:border-0">
                       <td className="px-4 py-4">
-                        <div className="text-primary font-bold">{appointment.time}</div>
-                        <div className="text-sm text-neutral-500">{appointment.date}</div>
+                        <div className="text-primary font-bold">{appointment.startTime}</div>
+                        <div className="text-sm text-neutral-500">{appointment.appointmentDate}</div>
                       </td>
                       <td className="px-4 py-4">
                         <div className="font-medium text-neutral-900">{appointment.patientName}</div>
                       </td>
                       <td className="px-4 py-4">
-                        {appointment.idNumber && (
-                          <div className="text-sm text-neutral-600">ID: {appointment.idNumber}</div>
+                        {appointment.patientNationalId && (
+                          <div className="text-sm text-neutral-600">ID: {appointment.patientNationalId}</div>
                         )}
-                        {appointment.birthDate && (
-                          <div className="text-sm text-neutral-600">BD: {appointment.birthDate}</div>
+                        {appointment.patientBirthDate && (
+                          <div className="text-sm text-neutral-600">BD: {appointment.patientBirthDate}</div>
                         )}
-                        {appointment.phone && (
-                          <div className="text-sm text-neutral-600">{appointment.phone}</div>
+                        {appointment.patientPhone && (
+                          <div className="text-sm text-neutral-600">{appointment.patientPhone}</div>
                         )}
                       </td>
                       <td className="px-4 py-4">
@@ -397,7 +295,7 @@ export default function DashboardPage() {
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm text-neutral-600">{appointment.note}</div>
+                        <div className="text-sm text-neutral-600">{appointment.patientNotes}</div>
                       </td>
                       <td className="px-4 py-4">
                         <button
