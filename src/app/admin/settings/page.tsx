@@ -789,7 +789,7 @@ export default function SettingsPage() {
               {/* 新增帳號表單 */}
               <div className="grid grid-cols-2 gap-4">
                 {/* 帳戶名稱 */}
-                <div className="w-56">
+                <div className="w-full">
                   <label className="text-sm text-neutral-500 mb-1 block">
                     帳戶名稱
                   </label>
@@ -797,12 +797,12 @@ export default function SettingsPage() {
                     type="text"
                     value={accountUsername}
                     onChange={(e) => setAccountUsername(e.target.value)}
-                    className="w-full h-11 px-3 bg-neutral-100 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                   />
                 </div>
 
                 {/* 密碼設定 */}
-                <div className="w-56">
+                <div className="w-full">
                   <label className="text-sm text-neutral-500 mb-1 block">
                     密碼設定
                   </label>
@@ -810,19 +810,19 @@ export default function SettingsPage() {
                     type="password"
                     value={accountPassword}
                     onChange={(e) => setAccountPassword(e.target.value)}
-                    className="w-full h-11 px-3 bg-neutral-100 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
                   />
                 </div>
 
                 {/* 權限設定 */}
-                <div className="w-40 relative">
+                <div className="w-full relative">
                   <label className="text-sm text-neutral-500 mb-1 block">
                     權限設定
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-                    className="w-full h-11 px-3 bg-neutral-100 border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
                     <span className="text-neutral-700">
                       {getRoleLabel(accountRole)}
