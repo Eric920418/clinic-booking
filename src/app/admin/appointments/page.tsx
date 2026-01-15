@@ -316,6 +316,10 @@ export default function AppointmentsPage() {
         console.error('更新狀態失敗:', statusResult.error?.message);
       }
 
+      // 找到醫師名稱（優先從 doctors 列表找，找不到就用原始資料）
+      const doctor = doctors.find((d) => d.id === data.doctorId);
+      const doctorName = doctor?.name;
+
       // 再更新其他欄位（日期、時間、醫師、診療類型）
       const updateResponse = await fetch(`/api/admin/appointments/${data.id}`, {
         method: 'PUT',
@@ -324,6 +328,7 @@ export default function AppointmentsPage() {
           date: data.date,
           time: data.time,
           doctorId: data.doctorId,
+          doctorName: doctorName,
           treatmentType: data.treatmentType,
         }),
       });

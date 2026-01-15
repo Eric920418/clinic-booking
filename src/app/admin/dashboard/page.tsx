@@ -162,7 +162,7 @@ export default function DashboardPage() {
         {/* 錯誤提示 */}
         {error && (
           <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg text-error">
-            {error.message || '載入資料失敗'}
+            {error.message || "載入資料失敗"}
           </div>
         )}
 
@@ -170,13 +170,20 @@ export default function DashboardPage() {
         <div className="bg-white rounded-xl border border-neutral-200 p-4 mb-6">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <label className="text-sm text-neutral-500 mb-1 block">醫師</label>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-neutral-500 mb-1 block">
+                  醫師
+                </label>
+                <div className="text-sm text-primary font-medium">
+                  {selectedDoctor ? 1 : 0}/{doctors.length}
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowDoctorDropdown(!showDoctorDropdown)}
                 className="w-40 h-10 px-3 bg-white border border-neutral-300 rounded-lg flex items-center justify-between text-sm"
               >
-                <span>{selectedDoctor?.name || '選擇醫師'}</span>
+                <span>{selectedDoctor?.name || "選擇醫師"}</span>
                 <ChevronDown className="w-4 h-4 text-neutral-400" />
               </button>
               {showDoctorDropdown && (
@@ -193,20 +200,29 @@ export default function DashboardPage() {
                         }}
                         className="w-full px-3 py-2 flex items-center gap-2 text-sm hover:bg-neutral-50"
                       >
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                          isSelected ? 'border-primary' : 'border-neutral-300'
-                        }`}>
-                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                            isSelected ? "border-primary" : "border-neutral-300"
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                          )}
                         </div>
-                        <span className={isSelected ? 'text-primary font-medium' : 'text-neutral-700'}>{doctor.name}</span>
+                        <span
+                          className={
+                            isSelected
+                              ? "text-primary font-medium"
+                              : "text-neutral-700"
+                          }
+                        >
+                          {doctor.name}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
               )}
-            </div>
-            <div className="text-sm text-primary font-medium">
-              {selectedDoctor ? 1 : 0}/{doctors.length}
             </div>
           </div>
         </div>
@@ -216,12 +232,14 @@ export default function DashboardPage() {
           {/* 今日已預約 */}
           <div className="bg-white rounded-xl border border-neutral-200 p-4">
             <div className="flex items-start justify-between">
+              <div className="w-1 h-5 bg-primary rounded-full" />
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-5 bg-primary rounded-full" />
                   <span className="text-sm text-neutral-600">今日已預約</span>
                 </div>
-                <div className="text-4xl font-bold text-neutral-900">{summary.todayBooked}</div>
+                <div className="text-4xl font-bold text-neutral-900">
+                  {summary.todayBooked}
+                </div>
               </div>
               <Calendar className="w-6 h-6 text-neutral-300" />
             </div>
@@ -230,12 +248,14 @@ export default function DashboardPage() {
           {/* 今日已完成 */}
           <div className="bg-white rounded-xl border border-neutral-200 p-4">
             <div className="flex items-start justify-between">
+              <div className="w-1 h-5 bg-success rounded-full" />
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-5 bg-success rounded-full" />
                   <span className="text-sm text-neutral-600">今日已完成</span>
                 </div>
-                <div className="text-4xl font-bold text-neutral-900">{summary.todayCompleted}</div>
+                <div className="text-4xl font-bold text-neutral-900">
+                  {summary.todayCompleted}
+                </div>
               </div>
               <CheckCircle className="w-6 h-6 text-neutral-300" />
             </div>
@@ -244,12 +264,14 @@ export default function DashboardPage() {
           {/* 今日已取消 */}
           <div className="bg-white rounded-xl border border-neutral-200 p-4">
             <div className="flex items-start justify-between">
+              <div className="w-1 h-5 bg-error rounded-full" />
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-5 bg-error rounded-full" />
                   <span className="text-sm text-neutral-600">今日已取消</span>
                 </div>
-                <div className="text-4xl font-bold text-neutral-900">{summary.todayCancelled}</div>
+                <div className="text-4xl font-bold text-neutral-900">
+                  {summary.todayCancelled}
+                </div>
               </div>
               <XCircle className="w-6 h-6 text-neutral-300" />
             </div>
@@ -261,61 +283,103 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-50">
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">看診時間</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">預約患者</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">基本資料</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">預約項目</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">報到狀態</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">備註</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">操作</th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">
+                  看診時間
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">
+                  預約患者
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">
+                  基本資料
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">
+                  預約項目
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">
+                  報到狀態
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">
+                  備註
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-3">
+                  操作
+                </th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-neutral-500">
+                  <td
+                    colSpan={7}
+                    className="px-4 py-12 text-center text-neutral-500"
+                  >
                     載入中...
                   </td>
                 </tr>
               ) : appointments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-neutral-500">
+                  <td
+                    colSpan={7}
+                    className="px-4 py-12 text-center text-neutral-500"
+                  >
                     今日尚無預約
                   </td>
                 </tr>
               ) : (
                 appointments.map((appointment) => {
-                  const status = STATUS_MAP[appointment.status] || STATUS_MAP.booked;
+                  const status =
+                    STATUS_MAP[appointment.status] || STATUS_MAP.booked;
                   return (
-                    <tr key={appointment.id} className="border-b border-neutral-100 last:border-0">
+                    <tr
+                      key={appointment.id}
+                      className="border-b border-neutral-100 last:border-0"
+                    >
                       <td className="px-4 py-4">
-                        <div className="text-primary font-bold">{appointment.startTime}</div>
-                        <div className="text-sm text-neutral-500">{appointment.appointmentDate}</div>
+                        <div className="text-primary font-bold">
+                          {appointment.startTime}
+                        </div>
+                        <div className="text-sm text-neutral-500">
+                          {appointment.appointmentDate}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="font-medium text-neutral-900">{appointment.patientName}</div>
+                        <div className="font-medium text-neutral-900">
+                          {appointment.patientName}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         {appointment.patientNationalId && (
-                          <div className="text-sm text-neutral-600">ID: {appointment.patientNationalId}</div>
+                          <div className="text-sm text-neutral-600">
+                            ID: {appointment.patientNationalId}
+                          </div>
                         )}
                         {appointment.patientBirthDate && (
-                          <div className="text-sm text-neutral-600">BD: {appointment.patientBirthDate}</div>
+                          <div className="text-sm text-neutral-600">
+                            BD: {appointment.patientBirthDate}
+                          </div>
                         )}
                         {appointment.patientPhone && (
-                          <div className="text-sm text-neutral-600">{appointment.patientPhone}</div>
+                          <div className="text-sm text-neutral-600">
+                            {appointment.patientPhone}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-neutral-900">{appointment.treatmentType}</div>
+                        <div className="text-neutral-900">
+                          {appointment.treatmentType}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${status.className}`}>
+                        <span
+                          className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${status.className}`}
+                        >
                           {status.label}
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm text-neutral-600">{appointment.patientNotes}</div>
+                        <div className="text-sm text-neutral-600">
+                          {appointment.patientNotes}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         <button

@@ -51,10 +51,11 @@ export async function GET(
 const updateAppointmentSchema = z.object({
   // 方式一：直接指定 timeSlotId
   timeSlotId: z.string().uuid().optional(),
-  // 方式二：使用 date + time + doctorId 查找 timeSlotId
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  doctorId: z.string().uuid().optional(),
+  // 方式二：使用 date + time + doctorId/doctorName 查找 timeSlotId
+  date: z.string().optional(), // 接受任意格式，在程式碼中處理
+  time: z.string().optional(), // 接受任意格式
+  doctorId: z.string().optional(), // 可以是 UUID 或任意字串
+  doctorName: z.string().optional(), // 醫師名稱
   // 診療類型
   treatmentTypeId: z.string().uuid().optional(),
   treatmentType: z.enum(['first_visit', 'internal', 'acupuncture']).optional(),
@@ -84,7 +85,7 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    const { timeSlotId: newTimeSlotId, treatmentTypeId: newTreatmentTypeId, date, time, doctorId, treatmentType } = parsed.data;
+    const { timeSlotId: newTimeSlotId, treatmentTypeId: newTreatmentTypeId, date, time, doctorId, doctorName, treatmentType } = parsed.data;
 
     // 使用交易處理，確保資料一致性
     const result = await prisma.$transaction(async (tx) => {
@@ -106,13 +107,57 @@ export async function PUT(
       // 決定最終的 timeSlotId
       let finalTimeSlotId = newTimeSlotId || originalAppointment.timeSlotId;
 
-      // 如果提供了 date、time、doctorId，則查找對應的 timeSlotId
-      if (date && time && doctorId) {
-        const targetDate = new Date(date);
+      // 如果提供了 date 和 time，則嘗試查找對應的 timeSlotId
+      if (date && time) {
+        // 先確定醫師 ID
+        let resolvedDoctorId = doctorId;
+
+        // 如果 doctorId 不是有效的 UUID，嘗試用它當作醫師名稱查找
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (doctorId && !uuidRegex.test(doctorId)) {
+          // doctorId 不是 UUID，可能是硬編碼的 "1", "2" 等，忽略它
+          resolvedDoctorId = undefined;
+        }
+
+        // 如果有 doctorName，用名稱查找醫師
+        if (doctorName) {
+          const doctor = await tx.doctor.findFirst({
+            where: { name: doctorName },
+          });
+          if (doctor) {
+            resolvedDoctorId = doctor.id;
+          }
+        }
+
+        // 如果還是沒有醫師 ID，使用原預約的醫師
+        if (!resolvedDoctorId) {
+          resolvedDoctorId = originalAppointment.timeSlot.schedule.doctorId;
+        }
+
+        // 處理日期格式（可能是西元年 2025-01-15 或民國年 114-01-15）
+        let targetDate: Date;
+        const dateParts = date.split('-');
+        if (dateParts.length === 3) {
+          const year = parseInt(dateParts[0]);
+          const month = parseInt(dateParts[1]) - 1;
+          const day = parseInt(dateParts[2]);
+          // 如果年份小於 1900，假設是民國年
+          if (year < 1900) {
+            targetDate = new Date(year + 1911, month, day);
+          } else {
+            targetDate = new Date(year, month, day);
+          }
+        } else {
+          targetDate = new Date(date);
+        }
+
+        // 處理時間格式（確保是 HH:mm 格式）
+        const normalizedTime = time.includes(':') ? time.substring(0, 5) : time;
+
         const schedule = await tx.schedule.findUnique({
           where: {
             doctorId_date: {
-              doctorId,
+              doctorId: resolvedDoctorId,
               date: targetDate,
             },
           },
@@ -125,7 +170,7 @@ export async function PUT(
         const timeSlot = await tx.timeSlot.findFirst({
           where: {
             scheduleId: schedule.id,
-            startTime: time,
+            startTime: normalizedTime,
           },
         });
 
