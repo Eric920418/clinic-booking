@@ -185,7 +185,7 @@ export default function PatientsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="查詢患者"
-              className="w-full h-11 pl-12 pr-4 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
+              className="w-full h-11 pl-14 pr-4 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
             />
           </div>
         </div>
