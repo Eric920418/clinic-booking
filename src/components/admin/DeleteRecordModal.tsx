@@ -37,7 +37,7 @@ export default function DeleteRecordModal({
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={onClose}

@@ -291,7 +291,7 @@ export default function EditAppointmentModal({
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-neutral-100">
+        <div className="p-4 border-t border-neutral-100">
           {/* 刪除按鈕 */}
           <button
             type="button"

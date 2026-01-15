@@ -280,7 +280,7 @@ export default function EditAccountModal({
           )}
 
           {/* 操作按鈕 */}
-          <div className="flex items-center justify-end gap-5">
+          <div className="flex items-center justify-end gap-4">
             <button
               type="button"
               onClick={onClose}

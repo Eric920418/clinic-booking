@@ -76,7 +76,7 @@ export default function BookingSuccessPage() {
     <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col">
       <main className="flex-1 flex flex-col pt-[44px] pb-8 px-4">
         {/* 成功卡片 */}
-        <div className="bg-[#008ADA] rounded-2xl p-5 mb-6">
+        <div className="bg-[#008ADA] rounded-2xl p-4 mb-6">
           <h1 className="text-xl font-bold text-white mb-4">
             您已完成掛號！
           </h1>

@@ -252,7 +252,7 @@ export default function EditPatientModal({
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-neutral-100">
+        <div className="p-4 border-t border-neutral-100">
           {/* 刪除確認區塊 */}
           {showDeleteConfirm ? (
             <div className="mb-4 p-4 border-2 border-error rounded-xl">

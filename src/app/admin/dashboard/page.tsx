@@ -196,7 +196,7 @@ export default function DashboardPage() {
         {/* 統計卡片 */}
         <div className="grid grid-cols-3 gap-6 mb-6">
           {/* 今日已預約 */}
-          <div className="bg-white rounded-xl border border-neutral-200 p-5">
+          <div className="bg-white rounded-xl border border-neutral-200 p-4">
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -210,7 +210,7 @@ export default function DashboardPage() {
           </div>
 
           {/* 今日已完成 */}
-          <div className="bg-white rounded-xl border border-neutral-200 p-5">
+          <div className="bg-white rounded-xl border border-neutral-200 p-4">
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -224,7 +224,7 @@ export default function DashboardPage() {
           </div>
 
           {/* 今日已取消 */}
-          <div className="bg-white rounded-xl border border-neutral-200 p-5">
+          <div className="bg-white rounded-xl border border-neutral-200 p-4">
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
