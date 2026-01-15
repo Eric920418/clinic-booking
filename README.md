@@ -557,7 +557,13 @@ Admin Layout 優化：使用 SWR 緩存用戶認證資料（60 秒內不重複�
 ### Prisma 查詢優化
 
 - 使用 `select` 代替 `include: true`，只查詢需要的欄位
+- 移除不必要的嵌套查詢（如 `include: { schedule: true }`）
 - 週統計使用 SQL `GROUP BY` 在資料庫層分組，減少數據傳輸
+
+### Bundle 優化
+
+- 移除未使用的依賴（recharts ~100KB）
+- 使用 `next/dynamic` 延遲載入大型元件
 
 ### SWR Hooks
 

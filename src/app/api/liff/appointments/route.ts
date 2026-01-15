@@ -42,13 +42,19 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     const appointments = await prisma.appointment.findMany({
       where: { patientId: patient.id },
-      include: {
-        doctor: true,
-        treatmentType: true,
+      select: {
+        id: true,
+        appointmentDate: true,
+        status: true,
+        createdAt: true,
+        doctor: {
+          select: { name: true },
+        },
+        treatmentType: {
+          select: { name: true },
+        },
         timeSlot: {
-          include: {
-            schedule: true,
-          },
+          select: { startTime: true, endTime: true },
         },
       },
       orderBy: { appointmentDate: 'desc' },
