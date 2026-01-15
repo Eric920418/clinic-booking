@@ -161,17 +161,21 @@ export async function PUT(
               date: targetDate,
             },
           },
+          include: {
+            timeSlots: true,
+          },
         });
 
         if (!schedule) {
           throw new Error('E001_NO_SCHEDULE'); // 該日期無班表
         }
 
-        const timeSlot = await tx.timeSlot.findFirst({
-          where: {
-            scheduleId: schedule.id,
-            startTime: normalizedTime,
-          },
+        // 在應用層面比對時間（因為 startTime 是 DateTime 類型，需要格式化後比對）
+        const timeSlot = schedule.timeSlots.find((slot) => {
+          const slotTime = new Date(slot.startTime);
+          const slotHours = slotTime.getUTCHours().toString().padStart(2, '0');
+          const slotMinutes = slotTime.getUTCMinutes().toString().padStart(2, '0');
+          return `${slotHours}:${slotMinutes}` === normalizedTime;
         });
 
         if (!timeSlot) {
