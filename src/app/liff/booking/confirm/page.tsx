@@ -71,14 +71,41 @@ export default function ConfirmBookingPage() {
     setIsLoading(true);
 
     try {
-      // TODO: 實際呼叫 API 建立預約
-      // const response = await fetch('/api/liff/appointments', {
-      //   method: 'POST',
-      //   body: JSON.stringify(bookingData),
-      // });
+      // 取得 LINE User ID
+      const lineUserId = localStorage.getItem('lineUserId') || localStorage.getItem('mockLineUserId');
 
-      // 模擬 API 延遲
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!lineUserId) {
+        alert('請先登入 LINE');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!bookingData.doctor || !bookingData.date || !bookingData.timeSlot || !bookingData.treatment) {
+        alert('預約資料不完整');
+        setIsLoading(false);
+        return;
+      }
+
+      // 呼叫真實 API 建立預約
+      const response = await fetch('/api/liff/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lineUserId,
+          doctorId: bookingData.doctor.id,
+          timeSlotId: bookingData.timeSlot.id,
+          treatmentTypeId: bookingData.treatment.id,
+          appointmentDate: bookingData.date.toISOString().split('T')[0],
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        alert(result.error?.message || '預約失敗');
+        setIsLoading(false);
+        return;
+      }
 
       // 清除 sessionStorage 中的預約流程資料
       sessionStorage.removeItem('selectedDoctor');
@@ -90,6 +117,7 @@ export default function ConfirmBookingPage() {
       router.push('/liff/booking/success');
     } catch (error) {
       console.error('預約失敗:', error);
+      alert('預約失敗，請稍後再試');
       setIsLoading(false);
     }
   };

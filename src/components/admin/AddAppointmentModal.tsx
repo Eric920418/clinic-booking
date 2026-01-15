@@ -4,8 +4,9 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Search, ChevronDown, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface AddAppointmentModalProps {
   isOpen: boolean;
@@ -30,33 +31,21 @@ interface Patient {
   phone: string;
 }
 
-// 模擬病患資料
-const MOCK_PATIENTS: Patient[] = [
-  { id: '1', name: '陳小美', birthDate: '03/05/083', idNumber: 'A112345678', phone: '0912-345-678' },
-  { id: '2', name: '陳小美', birthDate: '03/05/083', idNumber: 'A112345678', phone: '0912-345-678' },
-  { id: '3', name: '陳小美', birthDate: '03/05/083', idNumber: 'A112345678', phone: '0912-345-678' },
-  { id: '4', name: '陳小美', birthDate: '03/05/083', idNumber: 'A112345678', phone: '0912-345-678' },
-];
+interface Doctor {
+  id: string;
+  name: string;
+}
 
-// 模擬醫師資料
-const MOCK_DOCTORS = [
-  { id: '1', name: '陳小美' },
-  { id: '2', name: '王醫師' },
-  { id: '3', name: '林醫師' },
-];
+interface TreatmentType {
+  value: string;
+  label: string;
+}
 
-// 看診項目
-const TREATMENT_TYPES = [
-  { value: 'first_visit', label: '初診' },
-  { value: 'internal', label: '內科' },
-  { value: 'acupuncture', label: '針灸' },
-];
-
-// 時間選項
-const TIME_OPTIONS = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-];
+interface TimeSlot {
+  id: string;
+  time: string;
+  remainingMinutes: number;
+}
 
 type IdentityTab = 'search' | 'create';
 
@@ -69,6 +58,7 @@ export default function AddAppointmentModal({
   const [identityTab, setIdentityTab] = useState<IdentityTab>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [patients, setPatients] = useState<Patient[]>([]);
 
   // 步驟二：預約時段
   const [selectedDoctor, setSelectedDoctor] = useState('');
@@ -80,17 +70,139 @@ export default function AddAppointmentModal({
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
 
+  // 資料狀態
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [treatmentTypes, setTreatmentTypes] = useState<TreatmentType[]>([]);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // 載入醫師和診療項目資料
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [doctorsRes, treatmentsRes] = await Promise.all([
+          fetch('/api/liff/doctors'),
+          fetch('/api/liff/treatment-types'),
+        ]);
+
+        if (doctorsRes.ok) {
+          const doctorsData = await doctorsRes.json();
+          if (doctorsData.success && doctorsData.data) {
+            setDoctors(doctorsData.data.map((d: { id: string; name: string }) => ({
+              id: d.id,
+              name: d.name,
+            })));
+          }
+        }
+
+        if (treatmentsRes.ok) {
+          const treatmentsData = await treatmentsRes.json();
+          if (treatmentsData.success && treatmentsData.data) {
+            setTreatmentTypes(treatmentsData.data.map((t: { id: string; name: string }) => ({
+              value: t.id,
+              label: t.name,
+            })));
+          }
+        }
+      } catch (err) {
+        console.error('載入資料失敗:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [isOpen]);
+
+  // 載入時段資料（當選擇醫師和日期後）
+  useEffect(() => {
+    if (!selectedDoctor || !appointmentDate) {
+      setTimeSlots([]);
+      return;
+    }
+
+    const fetchTimeSlots = async () => {
+      try {
+        // 將民國年轉換為西元年
+        const dateMatch = appointmentDate.match(/(\d{2,3})\/(\d{2})\/(\d{2,3})/);
+        let dateStr = appointmentDate;
+        if (dateMatch) {
+          const year = parseInt(dateMatch[1]) + 1911;
+          const month = dateMatch[2];
+          const day = dateMatch[3];
+          dateStr = `${year}-${month}-${day}`;
+        }
+
+        const response = await fetch(
+          `/api/liff/time-slots?doctorId=${selectedDoctor}&date=${dateStr}`
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setTimeSlots(result.data.map((slot: { id: string; startTime: string; remainingMinutes: number }) => ({
+              id: slot.id,
+              time: slot.startTime,
+              remainingMinutes: slot.remainingMinutes,
+            })));
+          }
+        }
+      } catch (err) {
+        console.error('載入時段失敗:', err);
+      }
+    };
+
+    fetchTimeSlots();
+  }, [selectedDoctor, appointmentDate]);
+
+  // 搜尋病患 - 從預約資料取得病患清單
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchPatients = async () => {
+      try {
+        const response = await fetch('/api/admin/appointments');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            // 從預約資料中提取不重複的病患
+            const patientMap = new Map<string, Patient>();
+            result.data.forEach((appt: { patient: { id: string; name: string; birthDate?: string; nationalId?: string; phone?: string } }) => {
+              if (appt.patient && !patientMap.has(appt.patient.id)) {
+                patientMap.set(appt.patient.id, {
+                  id: appt.patient.id,
+                  name: appt.patient.name,
+                  birthDate: appt.patient.birthDate ? format(new Date(appt.patient.birthDate), 'yyyy/MM/dd') : '',
+                  idNumber: appt.patient.nationalId || '',
+                  phone: appt.patient.phone || '',
+                });
+              }
+            });
+            setPatients(Array.from(patientMap.values()));
+          }
+        }
+      } catch (err) {
+        console.error('載入病患資料失敗:', err);
+      }
+    };
+
+    fetchPatients();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   // 篩選病患
   const filteredPatients = searchQuery
-    ? MOCK_PATIENTS.filter(
+    ? patients.filter(
         (p) =>
           p.name.includes(searchQuery) ||
           p.idNumber.includes(searchQuery) ||
           p.phone.includes(searchQuery)
       )
-    : MOCK_PATIENTS;
+    : patients;
 
   // 確認預約
   const handleConfirm = () => {
@@ -110,7 +222,7 @@ export default function AddAppointmentModal({
 
   // 取得醫師名稱
   const getDoctorName = (id: string) => {
-    return MOCK_DOCTORS.find((d) => d.id === id)?.name || '';
+    return doctors.find((d) => d.id === id)?.name || '';
   };
 
   // 檢查是否可以確認預約
@@ -237,7 +349,7 @@ export default function AddAppointmentModal({
                     </button>
                     {showDoctorDropdown && (
                       <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                        {MOCK_DOCTORS.map((doctor) => (
+                        {doctors.map((doctor) => (
                           <button
                             key={doctor.id}
                             type="button"
@@ -273,8 +385,8 @@ export default function AddAppointmentModal({
                 {/* 看診項目 */}
                 <div>
                   <label className="text-sm text-neutral-500 mb-2 block">看診項目</label>
-                  <div className="flex gap-3">
-                    {TREATMENT_TYPES.map((type) => (
+                  <div className="flex gap-3 flex-wrap">
+                    {treatmentTypes.map((type) => (
                       <button
                         key={type.value}
                         type="button"
@@ -309,19 +421,28 @@ export default function AddAppointmentModal({
                   </button>
                   {showTimeDropdown && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                      {TIME_OPTIONS.map((time) => (
-                        <button
-                          key={time}
-                          type="button"
-                          onClick={() => {
-                            setSelectedTime(time);
-                            setShowTimeDropdown(false);
-                          }}
-                          className="w-full px-3 py-2 text-sm text-left hover:bg-neutral-50"
-                        >
-                          {time}
-                        </button>
-                      ))}
+                      {timeSlots.length > 0 ? (
+                        timeSlots.map((slot) => (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTime(slot.time);
+                              setShowTimeDropdown(false);
+                            }}
+                            disabled={slot.remainingMinutes <= 0}
+                            className={`w-full px-3 py-2 text-sm text-left hover:bg-neutral-50 ${
+                              slot.remainingMinutes <= 0 ? 'text-neutral-300 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            {slot.time} {slot.remainingMinutes <= 0 && '(額滿)'}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-neutral-400">
+                          {selectedDoctor && appointmentDate ? '無可用時段' : '請先選擇醫師和日期'}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

@@ -4,16 +4,16 @@
  */
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Circle, CheckCircle2 } from 'lucide-react';
 
-// 模擬醫師資料
-const DOCTORS = [
-  { id: '1', name: '陳醫師', note: '內科、針灸' },
-  { id: '2', name: '李醫師', note: '內科' },
-  { id: '3', name: '林醫師', note: '針灸' },
-];
+// 醫師型別
+interface Doctor {
+  id: string;
+  name: string;
+  note: string;
+}
 
 // 星期標籤
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -23,6 +23,39 @@ export default function SelectDoctorAndDatePage() {
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 載入醫師資料
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/liff/doctors');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setDoctors(result.data.map((d: { id: string; name: string; treatmentTypes?: { name: string }[] }) => ({
+              id: d.id,
+              name: d.name,
+              note: d.treatmentTypes?.map((t: { name: string }) => t.name).join('、') || '',
+            })));
+          }
+        } else {
+          setError('載入醫師資料失敗');
+        }
+      } catch (err) {
+        console.error('載入醫師資料失敗:', err);
+        setError('載入醫師資料失敗');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
 
   // 取得當前月份的日曆資料
   const calendarData = useMemo(() => {
@@ -77,7 +110,7 @@ export default function SelectDoctorAndDatePage() {
 
     // 如果已選擇醫師，跳轉到時段選擇
     if (selectedDoctor) {
-      const doctor = DOCTORS.find(d => d.id === selectedDoctor);
+      const doctor = doctors.find(d => d.id === selectedDoctor);
       sessionStorage.setItem('selectedDoctor', JSON.stringify({
         id: selectedDoctor,
         name: doctor?.name,
@@ -94,7 +127,7 @@ export default function SelectDoctorAndDatePage() {
 
     // 如果已選擇日期，跳轉到時段選擇
     if (selectedDate) {
-      const doctor = DOCTORS.find(d => d.id === doctorId);
+      const doctor = doctors.find(d => d.id === doctorId);
       sessionStorage.setItem('selectedDoctor', JSON.stringify({
         id: doctorId,
         name: doctor?.name,
@@ -133,9 +166,25 @@ export default function SelectDoctorAndDatePage() {
     );
   };
 
+  // 載入中狀態
+  if (loading) {
+    return (
+      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center">
+        <div className="text-neutral-500">載入中...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col">
       <main className="flex-1 flex flex-col pt-[44px] pb-8 px-4 overflow-y-auto">
+        {/* 錯誤訊息 */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
         {/* 選擇醫師區塊 */}
         <section className="mb-6">
           <div className="mb-4">
@@ -149,7 +198,7 @@ export default function SelectDoctorAndDatePage() {
 
           {/* 醫師列表 */}
           <div className="space-y-3">
-            {DOCTORS.map((doctor) => (
+            {doctors.map((doctor) => (
               <button
                 key={doctor.id}
                 type="button"

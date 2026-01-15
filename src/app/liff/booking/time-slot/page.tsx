@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 
 // 時段狀態類型
 type SlotStatus = 'available' | 'limited' | 'full';
@@ -18,40 +19,11 @@ interface TimeSlot {
   remainingMinutes: number;
 }
 
-// 模擬時段資料（實際應從 API 取得）
-const generateMockTimeSlots = (): TimeSlot[] => {
-  const slots: TimeSlot[] = [];
-  const statuses: SlotStatus[] = ['available', 'limited', 'full'];
-
-  // 上午時段 09:00 - 12:00
-  for (let hour = 9; hour < 12; hour++) {
-    for (let min = 0; min < 60; min += 30) {
-      const time = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-      const randomStatus = statuses[Math.floor(Math.random() * 3)];
-      slots.push({
-        id: `slot-${hour}-${min}`,
-        time,
-        status: randomStatus,
-        remainingMinutes: randomStatus === 'full' ? 0 : randomStatus === 'limited' ? 5 : 25,
-      });
-    }
-  }
-
-  // 下午時段 14:00 - 17:00
-  for (let hour = 14; hour < 17; hour++) {
-    for (let min = 0; min < 60; min += 30) {
-      const time = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-      const randomStatus = statuses[Math.floor(Math.random() * 3)];
-      slots.push({
-        id: `slot-${hour}-${min}`,
-        time,
-        status: randomStatus,
-        remainingMinutes: randomStatus === 'full' ? 0 : randomStatus === 'limited' ? 5 : 25,
-      });
-    }
-  }
-
-  return slots;
+// 根據剩餘分鐘數決定狀態
+const getSlotStatus = (remainingMinutes: number): SlotStatus => {
+  if (remainingMinutes <= 0) return 'full';
+  if (remainingMinutes <= 10) return 'limited';
+  return 'available';
 };
 
 export default function SelectTimeSlotPage() {
@@ -59,15 +31,56 @@ export default function SelectTimeSlotPage() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // 模擬載入時段資料
-    const timer = setTimeout(() => {
-      setTimeSlots(generateMockTimeSlots());
-      setIsLoading(false);
-    }, 300);
+    // 從 sessionStorage 取得選擇的醫師和日期
+    const fetchTimeSlots = async () => {
+      setIsLoading(true);
+      setError(null);
 
-    return () => clearTimeout(timer);
+      try {
+        const doctorStr = sessionStorage.getItem('selectedDoctor');
+        const dateStr = sessionStorage.getItem('selectedDate');
+
+        if (!doctorStr || !dateStr) {
+          setError('請先選擇醫師和日期');
+          setIsLoading(false);
+          return;
+        }
+
+        const doctor = JSON.parse(doctorStr);
+        const date = new Date(dateStr);
+        const formattedDate = format(date, 'yyyy-MM-dd');
+
+        const response = await fetch(
+          `/api/liff/time-slots?doctorId=${doctor.id}&date=${formattedDate}`
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setTimeSlots(result.data.map((slot: { id: string; startTime: string; remainingMinutes: number }) => ({
+              id: slot.id,
+              time: slot.startTime,
+              status: getSlotStatus(slot.remainingMinutes),
+              remainingMinutes: slot.remainingMinutes,
+            })));
+          } else {
+            setError(result.error?.message || '載入時段失敗');
+          }
+        } else {
+          setError('載入時段失敗');
+        }
+      } catch (err) {
+        console.error('載入時段失敗:', err);
+        setError('載入時段失敗');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTimeSlots();
   }, []);
 
   // 取得狀態文字和顏色
@@ -106,6 +119,21 @@ export default function SelectTimeSlotPage() {
     return (
       <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center">
         <div className="text-neutral-500">載入中...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col items-center justify-center p-4">
+        <div className="text-red-500 mb-4">{error}</div>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="text-[#008ADA] font-medium"
+        >
+          返回上一頁
+        </button>
       </div>
     );
   }

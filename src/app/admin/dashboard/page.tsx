@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Calendar,
@@ -15,54 +15,25 @@ import {
 } from 'lucide-react';
 import EditPatientModal from '@/components/admin/EditPatientModal';
 
-// 模擬醫師資料
-const DOCTORS = [
-  { id: '1', name: '王醫師' },
-  { id: '2', name: '李醫師' },
-  { id: '3', name: '陳醫師' },
-  { id: '4', name: '林醫師' },
-  { id: '5', name: '張醫師' },
-];
+// 醫師類型
+interface Doctor {
+  id: string;
+  name: string;
+}
 
-// 模擬預約資料
-const MOCK_APPOINTMENTS = [
-  {
-    id: '1',
-    time: '10:30',
-    date: '115-01-03',
-    patientName: '陳小美',
-    idNumber: 'A112349321',
-    birthDate: '083-05-03',
-    phone: '0902-568-234',
-    treatmentType: '內科',
-    status: 'completed',
-    note: '易對數料過敏',
-  },
-  {
-    id: '2',
-    time: '10:30',
-    date: '115-01-03',
-    patientName: '陳小美',
-    idNumber: 'A112349321',
-    birthDate: '083-05-03',
-    phone: '0902-568-234',
-    treatmentType: '內科',
-    status: 'completed',
-    note: '易對數料過敏',
-  },
-  {
-    id: '3',
-    time: '10:30',
-    date: '115-01-03',
-    patientName: '陳小美',
-    idNumber: 'A112349321',
-    birthDate: '083-05-03',
-    phone: '0902-568-234',
-    treatmentType: '內科',
-    status: 'completed',
-    note: '易對數料過敏',
-  },
-];
+// 預約類型
+interface Appointment {
+  id: string;
+  time: string;
+  date: string;
+  patientName: string;
+  idNumber: string;
+  birthDate: string;
+  phone: string;
+  treatmentType: string;
+  status: string;
+  note: string;
+}
 
 // 狀態對應
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
@@ -86,18 +57,122 @@ interface PatientData {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [selectedDoctor, setSelectedDoctor] = useState(DOCTORS[0]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
-  const [appointments, setAppointments] = useState(MOCK_APPOINTMENTS);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [stats, setStats] = useState({
-    booked: 1,
-    completed: 1,
-    cancelled: 1,
+    booked: 0,
+    completed: 0,
+    cancelled: 0,
   });
+
+  // 載入狀態
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Modal 狀態
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<PatientData | null>(null);
+
+  // 載入醫師列表
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await fetch('/api/liff/doctors');
+        const result = await response.json();
+        if (result.success && result.data) {
+          const doctorList = result.data.map((d: { id: string; name: string }) => ({
+            id: d.id,
+            name: d.name,
+          }));
+          setDoctors(doctorList);
+          if (doctorList.length > 0) {
+            setSelectedDoctor(doctorList[0]);
+          }
+        }
+      } catch (err) {
+        console.error('載入醫師列表失敗:', err);
+        setError('載入醫師列表失敗');
+      }
+    };
+    fetchDoctors();
+  }, []);
+
+  // 載入統計數據
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const response = await fetch('/api/admin/dashboard/summary');
+        const result = await response.json();
+        if (result.success && result.data) {
+          setStats({
+            booked: result.data.todayBooked || 0,
+            completed: result.data.todayCompleted || 0,
+            cancelled: result.data.todayCancelled || 0,
+          });
+        }
+      } catch (err) {
+        console.error('載入統計數據失敗:', err);
+      }
+    };
+    fetchSummary();
+  }, []);
+
+  // 載入今日預約列表
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      setLoading(true);
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const params = new URLSearchParams({
+          dateFrom: today,
+          dateTo: today,
+        });
+        if (selectedDoctor?.id) {
+          params.append('doctorId', selectedDoctor.id);
+        }
+
+        const response = await fetch(`/api/admin/appointments?${params}`);
+        const result = await response.json();
+
+        if (result.success && result.data?.items) {
+          const appointmentList = result.data.items.map((item: {
+            id: string;
+            startTime: string;
+            appointmentDate: string;
+            patientName: string;
+            patientPhone: string;
+            treatmentType: string;
+            status: string;
+          }) => ({
+            id: item.id,
+            time: item.startTime,
+            date: item.appointmentDate,
+            patientName: item.patientName,
+            idNumber: '', // API 未返回
+            birthDate: '', // API 未返回
+            phone: item.patientPhone || '',
+            treatmentType: item.treatmentType,
+            status: item.status,
+            note: '', // API 未返回
+          }));
+          setAppointments(appointmentList);
+        } else {
+          setAppointments([]);
+        }
+        setError(null);
+      } catch (err) {
+        console.error('載入預約列表失敗:', err);
+        setError('載入預約列表失敗');
+        setAppointments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAppointments();
+  }, [selectedDoctor]);
 
   // 新增預約
   const handleNewAppointment = () => {
@@ -105,7 +180,7 @@ export default function DashboardPage() {
   };
 
   // 編輯預約 - 開啟 Modal
-  const handleEditAppointment = (appointment: typeof MOCK_APPOINTMENTS[0]) => {
+  const handleEditAppointment = (appointment: Appointment) => {
     setEditingPatient({
       id: appointment.id,
       name: appointment.patientName,
@@ -119,7 +194,8 @@ export default function DashboardPage() {
   };
 
   // 儲存患者資料
-  const handleSavePatient = (data: PatientData) => {
+  const handleSavePatient = async (data: PatientData) => {
+    // TODO: 呼叫 API 更新患者資料
     setAppointments((prev) =>
       prev.map((apt) =>
         apt.id === data.id
@@ -138,8 +214,17 @@ export default function DashboardPage() {
   };
 
   // 刪除預約
-  const handleDeletePatient = (id: string) => {
-    setAppointments((prev) => prev.filter((apt) => apt.id !== id));
+  const handleDeletePatient = async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/appointments/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setAppointments((prev) => prev.filter((apt) => apt.id !== id));
+      }
+    } catch (err) {
+      console.error('刪除預約失敗:', err);
+    }
   };
 
   return (
@@ -158,6 +243,13 @@ export default function DashboardPage() {
 
       {/* 主內容 */}
       <div className="p-8">
+        {/* 錯誤提示 */}
+        {error && (
+          <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg text-error">
+            {error}
+          </div>
+        )}
+
         {/* 醫師篩選 */}
         <div className="bg-white rounded-xl border border-neutral-200 p-4 mb-6">
           <div className="flex items-center gap-4">
@@ -168,13 +260,13 @@ export default function DashboardPage() {
                 onClick={() => setShowDoctorDropdown(!showDoctorDropdown)}
                 className="w-40 h-10 px-3 bg-white border border-neutral-300 rounded-lg flex items-center justify-between text-sm"
               >
-                <span>{selectedDoctor.name}</span>
+                <span>{selectedDoctor?.name || '選擇醫師'}</span>
                 <ChevronDown className="w-4 h-4 text-neutral-400" />
               </button>
               {showDoctorDropdown && (
                 <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-neutral-200 rounded-lg shadow-lg z-10">
-                  {DOCTORS.map((doctor) => {
-                    const isSelected = selectedDoctor.id === doctor.id;
+                  {doctors.map((doctor) => {
+                    const isSelected = selectedDoctor?.id === doctor.id;
                     return (
                       <button
                         key={doctor.id}
@@ -198,7 +290,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="text-sm text-primary font-medium">
-              0/{DOCTORS.length}
+              {selectedDoctor ? 1 : 0}/{doctors.length}
             </div>
           </div>
         </div>
@@ -263,46 +355,66 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {appointments.map((appointment) => {
-                const status = STATUS_MAP[appointment.status] || STATUS_MAP.booked;
-                return (
-                  <tr key={appointment.id} className="border-b border-neutral-100 last:border-0">
-                    <td className="px-4 py-4">
-                      <div className="text-primary font-bold">{appointment.time}</div>
-                      <div className="text-sm text-neutral-500">{appointment.date}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="font-medium text-neutral-900">{appointment.patientName}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="text-sm text-neutral-600">ID: {appointment.idNumber}</div>
-                      <div className="text-sm text-neutral-600">BD: {appointment.birthDate}</div>
-                      <div className="text-sm text-neutral-600">{appointment.phone}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="text-neutral-900">{appointment.treatmentType}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${status.className}`}>
-                        {status.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="text-sm text-neutral-600">{appointment.note}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <button
-                        type="button"
-                        onClick={() => handleEditAppointment(appointment)}
-                        className="inline-flex items-center gap-1 px-4 py-2 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
-                      >
-                        <Pencil className="w-4 h-4" />
-                        編輯資料
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-neutral-500">
+                    載入中...
+                  </td>
+                </tr>
+              ) : appointments.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-neutral-500">
+                    今日尚無預約
+                  </td>
+                </tr>
+              ) : (
+                appointments.map((appointment) => {
+                  const status = STATUS_MAP[appointment.status] || STATUS_MAP.booked;
+                  return (
+                    <tr key={appointment.id} className="border-b border-neutral-100 last:border-0">
+                      <td className="px-4 py-4">
+                        <div className="text-primary font-bold">{appointment.time}</div>
+                        <div className="text-sm text-neutral-500">{appointment.date}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="font-medium text-neutral-900">{appointment.patientName}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        {appointment.idNumber && (
+                          <div className="text-sm text-neutral-600">ID: {appointment.idNumber}</div>
+                        )}
+                        {appointment.birthDate && (
+                          <div className="text-sm text-neutral-600">BD: {appointment.birthDate}</div>
+                        )}
+                        {appointment.phone && (
+                          <div className="text-sm text-neutral-600">{appointment.phone}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="text-neutral-900">{appointment.treatmentType}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${status.className}`}>
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="text-sm text-neutral-600">{appointment.note}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <button
+                          type="button"
+                          onClick={() => handleEditAppointment(appointment)}
+                          className="inline-flex items-center gap-1 px-4 py-2 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                          編輯資料
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

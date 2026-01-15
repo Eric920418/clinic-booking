@@ -4,47 +4,23 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Pencil } from 'lucide-react';
 import EditPatientModal from '@/components/admin/EditPatientModal';
 
-// 模擬患者資料
-const MOCK_PATIENTS = [
-  {
-    id: '1',
-    name: '陳小美',
-    idNumber: 'A112349321',
-    birthDate: '083-05-03',
-    phone: '0902-568-234',
-    doctorName: '王醫師',
-    treatmentType: '內科',
-    treatmentTypeValue: 'internal',
-    note: '易對數料過敏',
-  },
-  {
-    id: '2',
-    name: '陳小美',
-    idNumber: 'A112349321',
-    birthDate: '083-05-03',
-    phone: '0902-568-234',
-    doctorName: '王醫師',
-    treatmentType: '內科',
-    treatmentTypeValue: 'internal',
-    note: '易對數料過敏',
-  },
-  {
-    id: '3',
-    name: '陳小美',
-    idNumber: 'A112349321',
-    birthDate: '083-05-03',
-    phone: '0902-568-234',
-    doctorName: '王醫師',
-    treatmentType: '內科',
-    treatmentTypeValue: 'internal',
-    note: '易對數料過敏',
-  },
-];
+// 患者類型
+interface Patient {
+  id: string;
+  name: string;
+  idNumber: string;
+  birthDate: string;
+  phone: string;
+  doctorName: string;
+  treatmentType: string;
+  treatmentTypeValue: string;
+  note: string;
+}
 
 // 患者資料類型
 interface PatientData {
@@ -61,11 +37,68 @@ interface PatientData {
 export default function PatientsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [patients, setPatients] = useState(MOCK_PATIENTS);
+  const [patients, setPatients] = useState<Patient[]>([]);
+
+  // 載入狀態
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Modal 狀態
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<PatientData | null>(null);
+
+  // 載入患者列表
+  // TODO: 目前 API 沒有提供患者列表端點，暫時使用預約列表中的患者資料
+  useEffect(() => {
+    const fetchPatients = async () => {
+      setLoading(true);
+      try {
+        // 從預約資料中提取患者資訊
+        const response = await fetch('/api/admin/appointments?limit=100');
+        const result = await response.json();
+
+        if (result.success && result.data?.items) {
+          // 使用 Map 來去重患者
+          const patientMap = new Map<string, Patient>();
+
+          result.data.items.forEach((item: {
+            patientName: string;
+            patientPhone?: string;
+            treatmentType: string;
+            doctor: string;
+          }) => {
+            const key = item.patientName + (item.patientPhone || '');
+            if (!patientMap.has(key)) {
+              patientMap.set(key, {
+                id: key,
+                name: item.patientName,
+                idNumber: '',
+                birthDate: '',
+                phone: item.patientPhone || '',
+                doctorName: item.doctor,
+                treatmentType: item.treatmentType,
+                treatmentTypeValue: item.treatmentType === '內科' ? 'internal' : item.treatmentType === '初診' ? 'first_visit' : 'acupuncture',
+                note: '',
+              });
+            }
+          });
+
+          setPatients(Array.from(patientMap.values()));
+        } else {
+          setPatients([]);
+        }
+        setError(null);
+      } catch (err) {
+        console.error('載入患者列表失敗:', err);
+        setError('載入患者列表失敗');
+        setPatients([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatients();
+  }, []);
 
   // 篩選患者
   const filteredPatients = patients.filter((patient) => {
@@ -79,7 +112,7 @@ export default function PatientsPage() {
   });
 
   // 編輯患者
-  const handleEditPatient = (patient: typeof MOCK_PATIENTS[0]) => {
+  const handleEditPatient = (patient: Patient) => {
     setEditingPatient({
       id: patient.id,
       name: patient.name,
@@ -94,7 +127,8 @@ export default function PatientsPage() {
   };
 
   // 儲存患者資料
-  const handleSavePatient = (data: PatientData) => {
+  const handleSavePatient = async (data: PatientData) => {
+    // TODO: 呼叫 API 更新患者資料
     setPatients((prev) =>
       prev.map((p) =>
         p.id === data.id
@@ -114,7 +148,8 @@ export default function PatientsPage() {
   };
 
   // 刪除患者
-  const handleDeletePatient = (id: string) => {
+  const handleDeletePatient = async (id: string) => {
+    // TODO: 呼叫 API 刪除患者
     setPatients((prev) => prev.filter((p) => p.id !== id));
   };
 
@@ -133,6 +168,13 @@ export default function PatientsPage() {
 
       {/* 主內容 */}
       <div className="p-8">
+        {/* 錯誤提示 */}
+        {error && (
+          <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg text-error">
+            {error}
+          </div>
+        )}
+
         {/* 搜尋框 */}
         <div className="mb-6">
           <div className="relative w-80">
@@ -160,48 +202,61 @@ export default function PatientsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredPatients.map((patient) => (
-                <tr
-                  key={patient.id}
-                  className="border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50 transition-colors"
-                  onClick={() => router.push(`/admin/patients/${patient.id}`)}
-                >
-                  <td className="px-6 py-5">
-                    <div className="font-medium text-neutral-900">{patient.name}</div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="text-sm text-neutral-600">ID: {patient.idNumber}</div>
-                    <div className="text-sm text-neutral-600">BD: {patient.birthDate}</div>
-                    <div className="text-sm text-neutral-600">{patient.phone}</div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="text-neutral-900">{patient.doctorName}</div>
-                    <div className="text-sm text-neutral-600">{patient.treatmentType}</div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="text-sm text-neutral-600">{patient.note}</div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditPatient(patient);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
-                    >
-                      <Pencil className="w-4 h-4" />
-                      編輯資料
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-neutral-500">
+                    載入中...
                   </td>
                 </tr>
-              ))}
-              {filteredPatients.length === 0 && (
+              ) : filteredPatients.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-neutral-500">
                     {searchQuery ? '找不到符合的患者' : '目前沒有患者資料'}
                   </td>
                 </tr>
+              ) : (
+                filteredPatients.map((patient) => (
+                  <tr
+                    key={patient.id}
+                    className="border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50 transition-colors"
+                    onClick={() => router.push(`/admin/patients/${patient.id}`)}
+                  >
+                    <td className="px-6 py-5">
+                      <div className="font-medium text-neutral-900">{patient.name}</div>
+                    </td>
+                    <td className="px-6 py-5">
+                      {patient.idNumber && (
+                        <div className="text-sm text-neutral-600">ID: {patient.idNumber}</div>
+                      )}
+                      {patient.birthDate && (
+                        <div className="text-sm text-neutral-600">BD: {patient.birthDate}</div>
+                      )}
+                      {patient.phone && (
+                        <div className="text-sm text-neutral-600">{patient.phone}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="text-neutral-900">{patient.doctorName}</div>
+                      <div className="text-sm text-neutral-600">{patient.treatmentType}</div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="text-sm text-neutral-600">{patient.note}</div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditPatient(patient);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        編輯資料
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

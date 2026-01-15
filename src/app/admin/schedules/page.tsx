@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,79 +13,30 @@ import {
   Info,
 } from 'lucide-react';
 
-// 醫師選項
-const DOCTOR_OPTIONS = [
-  { id: 'all', name: '全部醫師' },
-  { id: '1', name: '林醫師' },
-  { id: '2', name: '王醫師' },
-  { id: '3', name: '陳醫師' },
-  { id: '4', name: '鄭醫師' },
-  { id: '5', name: '黃醫師' },
-];
+// 醫師類型
+interface Doctor {
+  id: string;
+  name: string;
+}
 
-// 模擬醫師班表資料（日檢視用）
-const MOCK_DOCTOR_SCHEDULES = [
-  {
-    doctorId: '1',
-    doctorName: '林醫師',
-    slots: [
-      { id: '1-1', label: '早班：09:00-12:30' },
-      { id: '1-2', label: '早班：09:00-12:30' },
-      { id: '1-3', label: '早班：09:00-12:30' },
-      { id: '1-4', label: '早班：09:00-12:30' },
-      { id: '1-5', label: '早班：09:00-12:30' },
-      { id: '1-6', label: '早班：09:00-12:30' },
-    ],
-  },
-  {
-    doctorId: '2',
-    doctorName: '王醫師',
-    slots: [
-      { id: '2-1', label: '早班：09:00-12:30' },
-      { id: '2-2', label: '早班：09:00-12:30' },
-      { id: '2-3', label: '早班：09:00-12:30' },
-      { id: '2-4', label: '早班：09:00-12:30' },
-      { id: '2-5', label: '早班：09:00-12:30' },
-      { id: '2-6', label: '早班：09:00-12:30' },
-    ],
-  },
-  {
-    doctorId: '3',
-    doctorName: '陳醫師',
-    slots: [
-      { id: '3-1', label: '早班：09:00-12:30' },
-      { id: '3-2', label: '早班：09:00-12:30' },
-      { id: '3-3', label: '早班：09:00-12:30' },
-      { id: '3-4', label: '早班：09:00-12:30' },
-      { id: '3-5', label: '早班：09:00-12:30' },
-      { id: '3-6', label: '早班：09:00-12:30' },
-    ],
-  },
-  {
-    doctorId: '4',
-    doctorName: '鄭醫師',
-    slots: [
-      { id: '4-1', label: '早班：09:00-12:30' },
-      { id: '4-2', label: '早班：09:00-12:30' },
-      { id: '4-3', label: '早班：09:00-12:30' },
-      { id: '4-4', label: '早班：09:00-12:30' },
-      { id: '4-5', label: '早班：09:00-12:30' },
-      { id: '4-6', label: '早班：09:00-12:30' },
-    ],
-  },
-  {
-    doctorId: '5',
-    doctorName: '黃醫師',
-    slots: [
-      { id: '5-1', label: '早班：09:00-12:30' },
-      { id: '5-2', label: '早班：09:00-12:30' },
-      { id: '5-3', label: '早班：09:00-12:30' },
-      { id: '5-4', label: '早班：09:00-12:30' },
-      { id: '5-5', label: '早班：09:00-12:30' },
-      { id: '5-6', label: '早班：09:00-12:30' },
-    ],
-  },
-];
+// 班表類型
+interface Schedule {
+  id: string;
+  doctorId: string;
+  doctorName: string;
+  date: string;
+  isAvailable: boolean;
+  timeSlots: TimeSlot[];
+}
+
+// 時段類型
+interface TimeSlot {
+  id: string;
+  startTime: string;
+  endTime: string;
+  totalMinutes: number;
+  remainingMinutes: number;
+}
 
 // 時段選項
 const TIME_SLOT_OPTIONS = [
@@ -103,13 +54,25 @@ type ViewMode = 'day' | 'week' | 'month';
 export default function SchedulesPage() {
   // 當前日期（用於週檢視）
   const [currentDate, setCurrentDate] = useState(() => {
-    // 預設為 115年1月11日（週六）
-    return new Date(2026, 0, 11);
+    return new Date();
   });
   // 當前年月（民國年）
-  const [currentYear, setCurrentYear] = useState(115);
-  const [currentMonth, setCurrentMonth] = useState(1);
+  const [currentYear, setCurrentYear] = useState(() => {
+    return new Date().getFullYear() - 1911;
+  });
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    return new Date().getMonth() + 1;
+  });
   const [viewMode, setViewMode] = useState<ViewMode>('month');
+
+  // 醫師列表
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  // 班表資料
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+
+  // 載入狀態
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 篩選狀態
   const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([]);
@@ -124,6 +87,75 @@ export default function SchedulesPage() {
 
   // 選中的時段（日檢視用）
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
+
+  // 載入醫師列表
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await fetch('/api/liff/doctors');
+        const result = await response.json();
+        if (result.success && result.data) {
+          setDoctors(result.data.map((d: { id: string; name: string }) => ({
+            id: d.id,
+            name: d.name,
+          })));
+        }
+      } catch (err) {
+        console.error('載入醫師列表失敗:', err);
+      }
+    };
+    fetchDoctors();
+  }, []);
+
+  // 載入班表資料
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      setLoading(true);
+      try {
+        const westernYear = currentYear + 1911;
+        const startDate = new Date(westernYear, currentMonth - 1, 1);
+        const endDate = new Date(westernYear, currentMonth, 0);
+
+        const params = new URLSearchParams({
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0],
+        });
+
+        const response = await fetch(`/api/admin/schedules?${params}`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const scheduleList: Schedule[] = result.data.map((item: {
+            id: string;
+            doctorId: string;
+            doctor: { name: string };
+            date: string;
+            isAvailable: boolean;
+            timeSlots: TimeSlot[];
+          }) => ({
+            id: item.id,
+            doctorId: item.doctorId,
+            doctorName: item.doctor?.name || '',
+            date: new Date(item.date).toISOString().split('T')[0],
+            isAvailable: item.isAvailable,
+            timeSlots: item.timeSlots || [],
+          }));
+          setSchedules(scheduleList);
+        } else {
+          setSchedules([]);
+        }
+        setError(null);
+      } catch (err) {
+        console.error('載入班表失敗:', err);
+        setError('載入班表失敗');
+        setSchedules([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSchedules();
+  }, [currentYear, currentMonth]);
 
   // 西元年轉民國年
   const toMinguoYear = (westernYear: number) => westernYear - 1911;
@@ -281,21 +313,19 @@ export default function SchedulesPage() {
 
   // 醫師多選處理
   const handleDoctorToggle = (doctorId: string) => {
-    if (doctorId === 'all') {
-      // 全選/取消全選
-      if (selectedDoctorIds.length === DOCTOR_OPTIONS.length - 1) {
-        setSelectedDoctorIds([]);
-      } else {
-        setSelectedDoctorIds(DOCTOR_OPTIONS.filter((d) => d.id !== 'all').map((d) => d.id));
+    setSelectedDoctorIds((prev) => {
+      if (prev.includes(doctorId)) {
+        return prev.filter((id) => id !== doctorId);
       }
-    } else {
-      setSelectedDoctorIds((prev) => {
-        if (prev.includes(doctorId)) {
-          return prev.filter((id) => id !== doctorId);
-        }
-        return [...prev, doctorId];
-      });
-    }
+      return [...prev, doctorId];
+    });
+  };
+
+  // 取得特定日期的班表資訊
+  const getScheduleForDate = (day: number) => {
+    const westernYear = currentYear + 1911;
+    const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return schedules.filter((s) => s.date === dateStr);
   };
 
   const calendarDays = generateCalendarDays();
@@ -334,6 +364,35 @@ export default function SchedulesPage() {
     return `${currentYear}年 ${currentMonth}月`;
   };
 
+  // 取得當日班表（日檢視用）
+  const getDaySchedules = () => {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    const daySchedules = schedules.filter((s) => s.date === dateStr);
+
+    // 按醫師分組
+    const doctorScheduleMap = new Map<string, { doctorId: string; doctorName: string; slots: { id: string; label: string }[] }>();
+
+    daySchedules.forEach((schedule) => {
+      if (!doctorScheduleMap.has(schedule.doctorId)) {
+        doctorScheduleMap.set(schedule.doctorId, {
+          doctorId: schedule.doctorId,
+          doctorName: schedule.doctorName,
+          slots: [],
+        });
+      }
+
+      const entry = doctorScheduleMap.get(schedule.doctorId)!;
+      schedule.timeSlots.forEach((slot) => {
+        entry.slots.push({
+          id: `${schedule.doctorId}-${slot.id}`,
+          label: `${slot.startTime}-${slot.endTime}`,
+        });
+      });
+    });
+
+    return Array.from(doctorScheduleMap.values());
+  };
+
   return (
     <div className="min-h-screen">
       {/* 頂部標題列 */}
@@ -349,6 +408,13 @@ export default function SchedulesPage() {
 
       {/* 主內容區 */}
       <div className="p-8">
+        {/* 錯誤提示 */}
+        {error && (
+          <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg text-error">
+            {error}
+          </div>
+        )}
+
         {/* 控制列 */}
         <div className="bg-white rounded-xl border border-neutral-200 p-4 mb-6">
           <div className="flex items-center justify-between">
@@ -412,7 +478,11 @@ export default function SchedulesPage() {
         </div>
 
         {/* 主要內容 */}
-        {viewMode === 'day' ? (
+        {loading ? (
+          <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center text-neutral-500">
+            載入中...
+          </div>
+        ) : viewMode === 'day' ? (
           /* 日檢視佈局 */
           <div>
             {/* 醫師篩選 */}
@@ -420,7 +490,7 @@ export default function SchedulesPage() {
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm text-neutral-500">選擇醫師</label>
                 <span className="text-sm text-primary font-medium">
-                  {selectedDoctorIds.length === 0 ? DOCTOR_OPTIONS.length - 1 : selectedDoctorIds.length}/{DOCTOR_OPTIONS.length - 1}
+                  {selectedDoctorIds.length === 0 ? doctors.length : selectedDoctorIds.length}/{doctors.length}
                 </span>
               </div>
               <div className="relative w-64">
@@ -430,7 +500,7 @@ export default function SchedulesPage() {
                   className="w-full h-10 px-3 bg-white border border-neutral-200 rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                 >
                   <span className="text-neutral-700">
-                    {selectedDoctorIds.length === 0 || selectedDoctorIds.length === DOCTOR_OPTIONS.length - 1
+                    {selectedDoctorIds.length === 0 || selectedDoctorIds.length === doctors.length
                       ? '全部醫師'
                       : `已選 ${selectedDoctorIds.length} 位`}
                   </span>
@@ -441,7 +511,7 @@ export default function SchedulesPage() {
                     <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-100">
                       <button
                         type="button"
-                        onClick={() => setSelectedDoctorIds(DOCTOR_OPTIONS.filter((d) => d.id !== 'all').map((d) => d.id))}
+                        onClick={() => setSelectedDoctorIds(doctors.map((d) => d.id))}
                         className="text-sm text-primary hover:underline"
                       >
                         全選
@@ -454,7 +524,7 @@ export default function SchedulesPage() {
                         取消
                       </button>
                     </div>
-                    {DOCTOR_OPTIONS.filter((d) => d.id !== 'all').map((doctor) => {
+                    {doctors.map((doctor) => {
                       const isSelected = selectedDoctorIds.length === 0 || selectedDoctorIds.includes(doctor.id);
                       return (
                         <button
@@ -485,32 +555,42 @@ export default function SchedulesPage() {
 
             {/* 醫師班表卡片 */}
             <div className="grid grid-cols-4 gap-4">
-              {MOCK_DOCTOR_SCHEDULES.map((doctor) => (
-                <div key={doctor.doctorId} className="bg-neutral-50 rounded-xl p-4">
-                  <div className="text-sm font-bold text-neutral-900 mb-3">
-                    {doctor.doctorName}
-                  </div>
-                  <div className="space-y-2">
-                    {doctor.slots.map((slot) => {
-                      const isSelected = selectedSlots.includes(slot.id);
-                      return (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          onClick={() => handleSlotClick(slot.id)}
-                          className={`w-full px-3 py-2 text-sm rounded-lg border transition-colors ${
-                            isSelected
-                              ? 'border-primary text-primary bg-white'
-                              : 'border-neutral-200 text-neutral-600 bg-white hover:border-neutral-300'
-                          }`}
-                        >
-                          {slot.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {getDaySchedules().length === 0 ? (
+                <div className="col-span-4 bg-neutral-50 rounded-xl p-8 text-center text-neutral-500">
+                  當日尚無排班資料
                 </div>
-              ))}
+              ) : (
+                getDaySchedules().map((doctor) => (
+                  <div key={doctor.doctorId} className="bg-neutral-50 rounded-xl p-4">
+                    <div className="text-sm font-bold text-neutral-900 mb-3">
+                      {doctor.doctorName}
+                    </div>
+                    <div className="space-y-2">
+                      {doctor.slots.length === 0 ? (
+                        <div className="text-sm text-neutral-400">尚未排班</div>
+                      ) : (
+                        doctor.slots.map((slot) => {
+                          const isSelected = selectedSlots.includes(slot.id);
+                          return (
+                            <button
+                              key={slot.id}
+                              type="button"
+                              onClick={() => handleSlotClick(slot.id)}
+                              className={`w-full px-3 py-2 text-sm rounded-lg border transition-colors ${
+                                isSelected
+                                  ? 'border-primary text-primary bg-white'
+                                  : 'border-neutral-200 text-neutral-600 bg-white hover:border-neutral-300'
+                              }`}
+                            >
+                              {slot.label}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         ) : (
@@ -523,7 +603,7 @@ export default function SchedulesPage() {
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm text-neutral-500">選擇醫師</label>
                   <span className="text-sm text-primary font-medium">
-                    {selectedDoctorIds.length}/{DOCTOR_OPTIONS.length - 1}
+                    {selectedDoctorIds.length}/{doctors.length}
                   </span>
                 </div>
                 <div className="relative">
@@ -538,7 +618,7 @@ export default function SchedulesPage() {
                     <span className="text-neutral-700">
                       {selectedDoctorIds.length === 0
                         ? '全部醫師'
-                        : selectedDoctorIds.length === DOCTOR_OPTIONS.length - 1
+                        : selectedDoctorIds.length === doctors.length
                           ? '全部醫師'
                           : `已選 ${selectedDoctorIds.length} 位`}
                     </span>
@@ -551,7 +631,7 @@ export default function SchedulesPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedDoctorIds(DOCTOR_OPTIONS.filter((d) => d.id !== 'all').map((d) => d.id));
+                            setSelectedDoctorIds(doctors.map((d) => d.id));
                           }}
                           className="text-sm text-primary hover:underline"
                         >
@@ -565,7 +645,7 @@ export default function SchedulesPage() {
                           取消
                         </button>
                       </div>
-                      {DOCTOR_OPTIONS.filter((d) => d.id !== 'all').map((doctor) => {
+                      {doctors.map((doctor) => {
                         const isSelected = selectedDoctorIds.includes(doctor.id);
                         return (
                           <button
@@ -685,6 +765,7 @@ export default function SchedulesPage() {
                     {weekDays.map((date, index) => {
                       const day = date.getDate();
                       const isSelected = selectedDates.includes(day);
+                      const daySchedules = schedules.filter((s) => s.date === date.toISOString().split('T')[0]);
 
                       return (
                         <div
@@ -694,9 +775,19 @@ export default function SchedulesPage() {
                           }`}
                           onClick={() => handleDateClick(day)}
                         >
-                          <div className="text-sm text-neutral-400">
-                            尚未排班
-                          </div>
+                          {daySchedules.length === 0 ? (
+                            <div className="text-sm text-neutral-400">
+                              尚未排班
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {daySchedules.map((schedule) => (
+                                <div key={schedule.id} className="text-xs text-primary">
+                                  {schedule.doctorName}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -723,6 +814,7 @@ export default function SchedulesPage() {
                     {calendarDays.map((day, index) => {
                       const isSelected = day !== null && selectedDates.includes(day);
                       const isWeekend = index % 7 === 0 || index % 7 === 6;
+                      const daySchedules = day ? getScheduleForDate(day) : [];
 
                       return (
                         <div
@@ -739,9 +831,24 @@ export default function SchedulesPage() {
                               }`}>
                                 {day}
                               </div>
-                              <div className="text-xs text-neutral-400">
-                                尚未排班
-                              </div>
+                              {daySchedules.length === 0 ? (
+                                <div className="text-xs text-neutral-400">
+                                  尚未排班
+                                </div>
+                              ) : (
+                                <div className="space-y-0.5">
+                                  {daySchedules.slice(0, 2).map((schedule) => (
+                                    <div key={schedule.id} className="text-xs text-primary truncate">
+                                      {schedule.doctorName}
+                                    </div>
+                                  ))}
+                                  {daySchedules.length > 2 && (
+                                    <div className="text-xs text-neutral-400">
+                                      +{daySchedules.length - 2} 更多
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </>
                           )}
                         </div>
