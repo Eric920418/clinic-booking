@@ -67,6 +67,13 @@
 <div className="border-accent-400" />
 ```
 
+### 輸入框樣式
+
+全局輸入框樣式（globals.css 已統一設定）：
+- 背景色：`#F5F5F5`
+- 邊框色：`#888888`
+- Focus 時邊框變為 Primary 色
+
 ## 診療項目
 
 | 項目 | 扣除分鐘數 | 備註 |
