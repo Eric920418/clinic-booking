@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Calendar,
@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Pencil,
 } from 'lucide-react';
+import EditPatientModal from '@/components/admin/EditPatientModal';
 
 // 模擬醫師資料
 const DOCTORS = [
@@ -72,6 +73,17 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   no_show: { label: '未報到', className: 'bg-error/10 text-error' },
 };
 
+// 患者資料類型
+interface PatientData {
+  id: string;
+  name: string;
+  phone: string;
+  idNumber: string;
+  birthDate: string;
+  treatmentType: string;
+  note: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [selectedDoctor, setSelectedDoctor] = useState(DOCTORS[0]);
@@ -83,14 +95,51 @@ export default function DashboardPage() {
     cancelled: 1,
   });
 
+  // Modal 狀態
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<PatientData | null>(null);
+
   // 新增預約
   const handleNewAppointment = () => {
     router.push('/admin/appointments/new');
   };
 
-  // 編輯預約
-  const handleEditAppointment = (id: string) => {
-    router.push(`/admin/appointments/${id}/edit`);
+  // 編輯預約 - 開啟 Modal
+  const handleEditAppointment = (appointment: typeof MOCK_APPOINTMENTS[0]) => {
+    setEditingPatient({
+      id: appointment.id,
+      name: appointment.patientName,
+      phone: appointment.phone,
+      idNumber: appointment.idNumber,
+      birthDate: appointment.birthDate,
+      treatmentType: appointment.treatmentType === '內科' ? 'internal' : appointment.treatmentType === '初診' ? 'first_visit' : 'acupuncture',
+      note: appointment.note,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // 儲存患者資料
+  const handleSavePatient = (data: PatientData) => {
+    setAppointments((prev) =>
+      prev.map((apt) =>
+        apt.id === data.id
+          ? {
+              ...apt,
+              patientName: data.name,
+              phone: data.phone,
+              idNumber: data.idNumber,
+              birthDate: data.birthDate,
+              treatmentType: data.treatmentType === 'internal' ? '內科' : data.treatmentType === 'first_visit' ? '初診' : '針灸',
+              note: data.note,
+            }
+          : apt
+      )
+    );
+  };
+
+  // 刪除預約
+  const handleDeletePatient = (id: string) => {
+    setAppointments((prev) => prev.filter((apt) => apt.id !== id));
   };
 
   return (
@@ -124,21 +173,27 @@ export default function DashboardPage() {
               </button>
               {showDoctorDropdown && (
                 <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-neutral-200 rounded-lg shadow-lg z-10">
-                  {DOCTORS.map((doctor) => (
-                    <button
-                      key={doctor.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDoctor(doctor);
-                        setShowDoctorDropdown(false);
-                      }}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-neutral-50 ${
-                        selectedDoctor.id === doctor.id ? 'bg-primary/5 text-primary' : ''
-                      }`}
-                    >
-                      {doctor.name}
-                    </button>
-                  ))}
+                  {DOCTORS.map((doctor) => {
+                    const isSelected = selectedDoctor.id === doctor.id;
+                    return (
+                      <button
+                        key={doctor.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDoctor(doctor);
+                          setShowDoctorDropdown(false);
+                        }}
+                        className="w-full px-3 py-2 flex items-center gap-2 text-sm hover:bg-neutral-50"
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                          isSelected ? 'border-primary' : 'border-neutral-300'
+                        }`}>
+                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                        </div>
+                        <span className={isSelected ? 'text-primary font-medium' : 'text-neutral-700'}>{doctor.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -238,7 +293,7 @@ export default function DashboardPage() {
                     <td className="px-4 py-4">
                       <button
                         type="button"
-                        onClick={() => handleEditAppointment(appointment.id)}
+                        onClick={() => handleEditAppointment(appointment)}
                         className="inline-flex items-center gap-1 px-4 py-2 bg-primary hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
                       >
                         <Pencil className="w-4 h-4" />
@@ -252,6 +307,15 @@ export default function DashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* 編輯患者 Modal */}
+      <EditPatientModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSavePatient}
+        onDelete={handleDeletePatient}
+        initialData={editingPatient}
+      />
     </div>
   );
 }
