@@ -142,18 +142,14 @@ export default function PatientHistoryPage() {
   return (
     <div className="min-h-screen">
       {/* 頂部標題列 */}
-      <header className="bg-white border-b border-neutral-200 px-8 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-neutral-900">患者資料</h1>
-        <button
-          type="button"
-          className="h-10 px-5 bg-primary hover:bg-primary-600 text-white font-medium text-sm rounded-lg transition-colors"
-        >
-          新增預約
-        </button>
+      <header className="bg-white px-6 pt-4">
+        <h1 className="text-xl font-bold text-neutral-900 pb-4 border-b border-neutral-200 ">
+          患者資料
+        </h1>
       </header>
 
       {/* 主內容 */}
-      <div className="p-8">
+      <div className="p-6">
         {/* 錯誤提示 */}
         {error && (
           <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg text-error">
@@ -164,7 +160,7 @@ export default function PatientHistoryPage() {
         {/* 搜尋框 */}
         <div className="mb-6">
           <div className="relative w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
             <input
               type="text"
               value={searchQuery}
@@ -179,68 +175,118 @@ export default function PatientHistoryPage() {
         <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50">
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">看診時間</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">患者名字</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">基本資料</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">預約醫師/ 項目</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">報到狀態</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">建立時間</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">備註</th>
-                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">操作</th>
+              <tr className="">
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">
+                  看診時間
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">
+                  患者名字
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">
+                  基本資料
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">
+                  預約醫師/ 項目
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">
+                  報到狀態
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">
+                  建立時間
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">
+                  備註
+                </th>
+                <th className="text-left text-sm font-medium text-neutral-500 px-4 py-4">
+                  操作
+                </th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-neutral-500">
+                  <td
+                    colSpan={8}
+                    className="px-4 py-12 text-center text-neutral-500"
+                  >
                     載入中...
                   </td>
                 </tr>
               ) : filteredHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-neutral-500">
-                    {searchQuery ? '找不到符合的記錄' : '目前沒有歷史資料'}
+                  <td
+                    colSpan={8}
+                    className="px-4 py-12 text-center text-neutral-500"
+                  >
+                    {searchQuery ? "找不到符合的記錄" : "目前沒有歷史資料"}
                   </td>
                 </tr>
               ) : (
                 filteredHistory.map((record) => {
-                  const status = STATUS_MAP[record.status] || STATUS_MAP.completed;
+                  const status =
+                    STATUS_MAP[record.status] || STATUS_MAP.completed;
                   return (
-                    <tr key={record.id} className="border-b border-neutral-100 last:border-0">
+                    <tr
+                      key={record.id}
+                      className="border-b border-neutral-100 last:border-0"
+                    >
                       <td className="px-4 py-4">
-                        <div className="text-primary font-bold">{record.time}</div>
-                        <div className="text-sm text-neutral-500">{record.date}</div>
+                        <div className="text-primary font-bold">
+                          {record.time}
+                        </div>
+                        <div className="text-sm text-neutral-500">
+                          {record.date}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="font-medium text-neutral-900">{record.patientName}</div>
+                        <div className="font-medium text-neutral-900">
+                          {record.patientName}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         {record.idNumber && (
-                          <div className="text-sm text-neutral-600">ID: {record.idNumber}</div>
+                          <div className="text-sm text-neutral-600">
+                            ID: {record.idNumber}
+                          </div>
                         )}
                         {record.birthDate && (
-                          <div className="text-sm text-neutral-600">BD: {record.birthDate}</div>
+                          <div className="text-sm text-neutral-600">
+                            BD: {record.birthDate}
+                          </div>
                         )}
                         {record.phone && (
-                          <div className="text-sm text-neutral-600">{record.phone}</div>
+                          <div className="text-sm text-neutral-600">
+                            {record.phone}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-neutral-900">{record.doctorName}</div>
-                        <div className="text-sm text-neutral-600">{record.treatmentType}</div>
+                        <div className="text-neutral-900">
+                          {record.doctorName}
+                        </div>
+                        <div className="text-sm text-neutral-600">
+                          {record.treatmentType}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${status.className}`}>
+                        <span
+                          className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${status.className}`}
+                        >
                           {status.label}
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-neutral-900">{record.createdDate}</div>
-                        <div className="text-sm text-neutral-500">{record.createdTime}</div>
+                        <div className="text-neutral-900">
+                          {record.createdDate}
+                        </div>
+                        <div className="text-sm text-neutral-500">
+                          {record.createdTime}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm text-neutral-600">{record.note}</div>
+                        <div className="text-sm text-neutral-600">
+                          {record.note}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         <button

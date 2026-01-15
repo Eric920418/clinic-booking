@@ -179,13 +179,13 @@ export default function PatientsPage() {
         {/* 搜尋框 */}
         <div className="mb-6">
           <div className="relative w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="查詢患者"
-              className="w-full h-11 pl-14 pr-4 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
+              className="w-full h-11 pl-10 pr-4 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
             />
           </div>
         </div>
