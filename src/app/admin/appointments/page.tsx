@@ -305,21 +305,35 @@ export default function AppointmentsPage() {
   // 儲存預約資料
   const handleSaveAppointment = async (data: AppointmentData) => {
     try {
-      const response = await fetch(`/api/admin/appointments/${data.id}/status`, {
+      // 先更新狀態
+      const statusResponse = await fetch(`/api/admin/appointments/${data.id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: data.status }),
+      });
+      const statusResult = await statusResponse.json();
+      if (!statusResult.success) {
+        console.error('更新狀態失敗:', statusResult.error?.message);
+      }
+
+      // 再更新其他欄位（日期、時間、醫師、診療類型）
+      const updateResponse = await fetch(`/api/admin/appointments/${data.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: data.status,
+          date: data.date,
+          time: data.time,
+          doctorId: data.doctorId,
+          treatmentType: data.treatmentType,
         }),
       });
-
-      const result = await response.json();
-      if (result.success) {
-        // 使用 SWR mutate 重新獲取資料
-        await mutate();
-      } else {
-        console.error('更新預約失敗:', result.error?.message);
+      const updateResult = await updateResponse.json();
+      if (!updateResult.success) {
+        console.error('更新預約失敗:', updateResult.error?.message);
       }
+
+      // 重新獲取資料
+      await mutate();
     } catch (err) {
       console.error('更新預約失敗:', err);
     }

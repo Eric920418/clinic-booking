@@ -49,8 +49,15 @@ export async function GET(
 // - Rule: 修改記錄必須包含操作人與操作時間
 // =============================================
 const updateAppointmentSchema = z.object({
+  // 方式一：直接指定 timeSlotId
   timeSlotId: z.string().uuid().optional(),
+  // 方式二：使用 date + time + doctorId 查找 timeSlotId
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  doctorId: z.string().uuid().optional(),
+  // 診療類型
   treatmentTypeId: z.string().uuid().optional(),
+  treatmentType: z.enum(['first_visit', 'internal', 'acupuncture']).optional(),
 });
 
 export async function PUT(
@@ -77,15 +84,7 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    const { timeSlotId: newTimeSlotId, treatmentTypeId: newTreatmentTypeId } = parsed.data;
-
-    // 如果沒有任何要更新的欄位，直接返回
-    if (!newTimeSlotId && !newTreatmentTypeId) {
-      return NextResponse.json({
-        success: false,
-        error: { code: 'E001', message: '沒有要更新的欄位' },
-      }, { status: 400 });
-    }
+    const { timeSlotId: newTimeSlotId, treatmentTypeId: newTreatmentTypeId, date, time, doctorId, treatmentType } = parsed.data;
 
     // 使用交易處理，確保資料一致性
     const result = await prisma.$transaction(async (tx) => {
@@ -93,7 +92,9 @@ export async function PUT(
       const originalAppointment = await tx.appointment.findUnique({
         where: { id },
         include: {
-          timeSlot: true,
+          timeSlot: {
+            include: { schedule: true },
+          },
           treatmentType: true,
         },
       });
@@ -102,13 +103,65 @@ export async function PUT(
         throw new Error('E007'); // 無此預約
       }
 
-      // 決定最終的時段和診療類型
-      const finalTimeSlotId = newTimeSlotId || originalAppointment.timeSlotId;
-      const finalTreatmentTypeId = newTreatmentTypeId || originalAppointment.treatmentTypeId;
+      // 決定最終的 timeSlotId
+      let finalTimeSlotId = newTimeSlotId || originalAppointment.timeSlotId;
+
+      // 如果提供了 date、time、doctorId，則查找對應的 timeSlotId
+      if (date && time && doctorId) {
+        const targetDate = new Date(date);
+        const schedule = await tx.schedule.findUnique({
+          where: {
+            doctorId_date: {
+              doctorId,
+              date: targetDate,
+            },
+          },
+        });
+
+        if (!schedule) {
+          throw new Error('E001_NO_SCHEDULE'); // 該日期無班表
+        }
+
+        const timeSlot = await tx.timeSlot.findFirst({
+          where: {
+            scheduleId: schedule.id,
+            startTime: time,
+          },
+        });
+
+        if (!timeSlot) {
+          throw new Error('E001_NO_TIMESLOT'); // 該時段不存在
+        }
+
+        finalTimeSlotId = timeSlot.id;
+      }
+
+      // 決定最終的診療類型 ID
+      let finalTreatmentTypeId = newTreatmentTypeId || originalAppointment.treatmentTypeId;
+
+      // 如果提供了 treatmentType 名稱，則查找對應的 ID
+      if (treatmentType) {
+        const treatmentTypeMap: Record<string, string> = {
+          first_visit: '初診',
+          internal: '內科',
+          acupuncture: '針灸',
+        };
+        const treatmentTypeRecord = await tx.treatmentType.findFirst({
+          where: { name: treatmentTypeMap[treatmentType] },
+        });
+        if (treatmentTypeRecord) {
+          finalTreatmentTypeId = treatmentTypeRecord.id;
+        }
+      }
+
+      // 如果沒有任何變更，直接返回
+      if (finalTimeSlotId === originalAppointment.timeSlotId && finalTreatmentTypeId === originalAppointment.treatmentTypeId) {
+        return originalAppointment;
+      }
 
       // 取得最終的診療類型（用於計算分鐘數）
-      const finalTreatmentType = newTreatmentTypeId
-        ? await tx.treatmentType.findUnique({ where: { id: newTreatmentTypeId } })
+      const finalTreatmentType = finalTreatmentTypeId !== originalAppointment.treatmentTypeId
+        ? await tx.treatmentType.findUnique({ where: { id: finalTreatmentTypeId } })
         : originalAppointment.treatmentType;
 
       if (!finalTreatmentType) {
@@ -211,6 +264,20 @@ export async function PUT(
         success: false,
         error: { code: 'E007', message: ERROR_CODES.E007 },
       }, { status: 404 });
+    }
+
+    if (errorMessage === 'E001_NO_SCHEDULE') {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '該日期無班表' },
+      }, { status: 400 });
+    }
+
+    if (errorMessage === 'E001_NO_TIMESLOT') {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '該時段不存在' },
+      }, { status: 400 });
     }
 
     return NextResponse.json({
