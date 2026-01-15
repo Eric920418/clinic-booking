@@ -400,12 +400,12 @@ export default function SettingsPage() {
       )}
 
       {/* 頂部標題列 */}
-      <header className="bg-white  px-8 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-neutral-900">系統設定</h1>
+      <header className="bg-white px-6 pt-4">
+        <h1 className="text-xl font-bold text-neutral-900 pb-4 border-b border-neutral-200">系統設定</h1>
       </header>
 
       {/* 主內容 */}
-      <div className="p-8">
+      <div className="p-6">
         {/* 分頁切換 */}
         <div className="mb-8">
           <div className="inline-flex bg-[#E7E7E7] rounded-lg px-[4px] py-[6.5px]">

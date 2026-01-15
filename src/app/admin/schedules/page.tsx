@@ -412,12 +412,12 @@ export default function SchedulesPage() {
   return (
     <div className="min-h-screen">
       {/* 頂部標題列 */}
-      <header className="bg-white  px-8 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-neutral-900">診次排班</h1>
+      <header className="bg-white px-6 pt-4">
+        <h1 className="text-xl font-bold text-neutral-900 pb-4 border-b border-neutral-200">診次排班</h1>
       </header>
 
       {/* 主內容區 */}
-      <div className="p-8">
+      <div className="p-6">
         {/* 錯誤提示 */}
         {(error || localError) && (
           <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg text-error flex justify-between items-center">
