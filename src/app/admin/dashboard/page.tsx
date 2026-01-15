@@ -230,7 +230,7 @@ export default function DashboardPage() {
         {/* 統計卡片 */}
         <div className="flex items-center gap-6 mb-6">
           {/* 今日已預約 */}
-          <div className="flex-1 bg-white rounded p-3 border border-primary flex flex-col gap-6">
+          <div className="flex-1 bg-white rounded p-3 border-l-4 border-primary flex flex-col gap-6">
             <h3 className="text-xl font-bold text-neutral-900">今日已預約</h3>
             <div className="flex items-center justify-between">
               <span className="text-[28px] font-bold text-neutral-900 leading-tight">
@@ -243,7 +243,7 @@ export default function DashboardPage() {
           </div>
 
           {/* 今日已完成 */}
-          <div className="flex-1 bg-white rounded p-3 border border-success flex flex-col gap-6">
+          <div className="flex-1 bg-white rounded p-3 border-l-4 border-success flex flex-col gap-6">
             <h3 className="text-xl font-bold text-neutral-900">今日已完成</h3>
             <div className="flex items-center justify-between">
               <span className="text-[28px] font-bold text-neutral-900 leading-tight">
