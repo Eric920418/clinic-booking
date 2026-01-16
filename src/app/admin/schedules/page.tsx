@@ -45,7 +45,7 @@ export default function SchedulesPage() {
 
   // 篩選狀態
   const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([]);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState(TIME_SLOT_OPTIONS[0].id);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>(['morning']); // 預設選早班
 
   // 下拉選單狀態
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
@@ -353,15 +353,17 @@ export default function SchedulesPage() {
     return null;
   };
 
-  // 過濾班表（根據選中的時段）
+  // 過濾班表（根據選中的時段，支援多選）
   const filterSchedulesByTimeSlot = (scheduleList: Schedule[]) => {
+    // 如果沒有選擇任何時段，不顯示任何班表
+    if (selectedTimeSlots.length === 0) return [];
     return scheduleList.filter((schedule) => {
       // 如果班表沒有時段，不顯示
       if (!schedule.timeSlots || schedule.timeSlots.length === 0) return false;
-      // 檢查是否有任何時段符合選中的班別
+      // 檢查是否有任何時段符合選中的班別（任一符合即可）
       return schedule.timeSlots.some((slot) => {
         const slotType = getTimeSlotType(slot.startTime);
-        return slotType === selectedTimeSlot;
+        return slotType && selectedTimeSlots.includes(slotType);
       });
     });
   };
@@ -385,7 +387,30 @@ export default function SchedulesPage() {
 
   const calendarDays = generateCalendarDays();
   const weekDays = generateWeekDays();
-  const selectedTimeSlotLabel = TIME_SLOT_OPTIONS.find((t) => t.id === selectedTimeSlot)?.label;
+
+  // 時段切換處理
+  const handleTimeSlotToggle = (slotId: string) => {
+    setSelectedTimeSlots((prev) => {
+      if (prev.includes(slotId)) {
+        return prev.filter((id) => id !== slotId);
+      }
+      return [...prev, slotId];
+    });
+  };
+
+  // 計算時段選擇的顯示文字
+  const getSelectedTimeSlotsLabel = () => {
+    if (selectedTimeSlots.length === 0) {
+      return '請選擇時段';
+    }
+    if (selectedTimeSlots.length === TIME_SLOT_OPTIONS.length) {
+      return '全部時段';
+    }
+    const selectedLabels = TIME_SLOT_OPTIONS
+      .filter((t) => selectedTimeSlots.includes(t.id))
+      .map((t) => t.label.split('：')[0]); // 只取 "早班"、"午班"、"晚班"
+    return selectedLabels.join('、');
+  };
 
   // 計算醫師選擇的顯示文字
   const getSelectedDoctorsLabel = () => {
@@ -568,7 +593,7 @@ export default function SchedulesPage() {
             {/* 醫師篩選 */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm text-neutral-500">選擇醫師</label>
+                <label className="text-sm text-neutral-500">步驟一：選擇醫師</label>
               </div>
               <div className="relative w-64">
                 <button
@@ -745,7 +770,7 @@ export default function SchedulesPage() {
               {/* 選擇時段 */}
               <div className="bg-white rounded-xl border border-neutral-200 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm text-neutral-500">選擇時段</label>
+                  <label className="text-sm text-neutral-500">步驟二：選擇時段</label>
                 </div>
                 <div className="relative">
                   <button
@@ -756,27 +781,45 @@ export default function SchedulesPage() {
                     }}
                     className="w-full h-10 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
-                    <span className="text-neutral-700">{selectedTimeSlotLabel}</span>
+                    <span className="text-neutral-700 truncate">{getSelectedTimeSlotsLabel()}</span>
                     <ChevronDown className="w-5 h-5 text-neutral-400" />
                   </button>
                   {showTimeSlotDropdown && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-10">
+                      {/* 全選/取消 */}
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-100">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTimeSlots(TIME_SLOT_OPTIONS.map((t) => t.id))}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          全選
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTimeSlots([])}
+                          className="text-sm text-neutral-500 hover:underline"
+                        >
+                          取消
+                        </button>
+                      </div>
                       {TIME_SLOT_OPTIONS.map((slot) => {
-                        const isSelected = selectedTimeSlot === slot.id;
+                        const isSelected = selectedTimeSlots.includes(slot.id);
                         return (
                           <button
                             key={slot.id}
                             type="button"
-                            onClick={() => {
-                              setSelectedTimeSlot(slot.id);
-                              setShowTimeSlotDropdown(false);
-                            }}
+                            onClick={() => handleTimeSlotToggle(slot.id)}
                             className="w-full px-3 py-2 flex items-center gap-2 text-sm hover:bg-neutral-50"
                           >
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                              isSelected ? 'border-primary' : 'border-neutral-300'
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                              isSelected ? 'bg-primary border-primary' : 'border-neutral-300'
                             }`}>
-                              {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                              {isSelected && (
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
                             </div>
                             <span className={isSelected ? 'text-primary font-medium' : 'text-neutral-700'}>
                               {slot.label}
