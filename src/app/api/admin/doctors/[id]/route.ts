@@ -14,6 +14,7 @@ interface RouteParams {
 // 驗證 Schema
 const updateDoctorSchema = z.object({
   name: z.string().min(2, '姓名至少 2 字元').max(20, '姓名不可超過 20 字元'),
+  treatmentIds: z.array(z.string().uuid()).optional(),
 })
 
 /**
@@ -51,11 +52,16 @@ export async function PUT(
       }, { status: 400 })
     }
 
-    const { name } = validationResult.data
+    const { name, treatmentIds } = validationResult.data
 
     // 檢查醫師是否存在
     const existingDoctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
+      include: {
+        doctorTreatments: {
+          select: { treatmentTypeId: true },
+        },
+      },
     })
 
     if (!existingDoctor) {
@@ -65,13 +71,49 @@ export async function PUT(
       }, { status: 404 })
     }
 
-    // 更新醫師姓名
-    const updatedDoctor = await prisma.doctor.update({
-      where: { id: doctorId },
-      data: { name },
+    // 使用事務更新醫師姓名和診療項目關聯
+    const updatedDoctor = await prisma.$transaction(async (tx) => {
+      // 更新醫師姓名
+      const doctor = await tx.doctor.update({
+        where: { id: doctorId },
+        data: { name },
+      })
+
+      // 如果有傳入 treatmentIds，更新診療項目關聯
+      if (treatmentIds !== undefined) {
+        // 刪除現有關聯
+        await tx.doctorTreatment.deleteMany({
+          where: { doctorId },
+        })
+
+        // 建立新關聯
+        if (treatmentIds.length > 0) {
+          await tx.doctorTreatment.createMany({
+            data: treatmentIds.map(treatmentTypeId => ({
+              doctorId,
+              treatmentTypeId,
+            })),
+          })
+        }
+      }
+
+      // 返回更新後的醫師（含診療項目）
+      return tx.doctor.findUnique({
+        where: { id: doctorId },
+        include: {
+          doctorTreatments: {
+            select: {
+              treatmentType: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+        },
+      })
     })
 
     // 記錄操作日誌
+    const oldTreatmentIds = existingDoctor.doctorTreatments.map(dt => dt.treatmentTypeId)
     await prisma.operationLog.create({
       data: {
         adminUserId: user.userId,
@@ -81,6 +123,8 @@ export async function PUT(
         details: {
           oldName: existingDoctor.name,
           newName: name,
+          oldTreatmentIds,
+          newTreatmentIds: treatmentIds || oldTreatmentIds,
         },
       },
     })

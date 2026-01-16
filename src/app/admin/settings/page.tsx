@@ -11,6 +11,7 @@ import EditTreatmentModal from '@/components/admin/EditTreatmentModal';
 import DeleteDoctorModal from '@/components/admin/DeleteDoctorModal';
 import EditAccountModal from '@/components/admin/EditAccountModal';
 import AddAppointmentModal from '@/components/admin/AddAppointmentModal';
+import EditDoctorModal from '@/components/admin/EditDoctorModal';
 import { useSettings } from '@/lib/api';
 
 // 分頁類型
@@ -122,6 +123,14 @@ export default function SettingsPage() {
   const [isDeleteDoctorModalOpen, setIsDeleteDoctorModalOpen] = useState(false);
   const [deletingDoctorId, setDeletingDoctorId] = useState<string | null>(null);
 
+  // 編輯醫師 Modal 狀態
+  const [isEditDoctorModalOpen, setIsEditDoctorModalOpen] = useState(false);
+  const [editingDoctor, setEditingDoctor] = useState<{
+    id: string;
+    name: string;
+    treatmentIds: string[];
+  } | null>(null);
+
   // 帳號管理狀態
   const [accountUsername, setAccountUsername] = useState('');
   const [accountPassword, setAccountPassword] = useState('');
@@ -200,6 +209,47 @@ export default function SettingsPage() {
     }
     setIsDeleteDoctorModalOpen(false);
     setDeletingDoctorId(null);
+  };
+
+  // 開啟編輯醫師 Modal
+  const handleEditDoctor = (doctor: Doctor) => {
+    // 從 API 資料中取得該醫師的診療項目 IDs
+    const apiDoctor = data?.doctors?.find(d => d.id === doctor.id);
+    const treatmentIds = (apiDoctor?.doctorTreatments || [])
+      .map(dt => dt.treatmentType?.id)
+      .filter(Boolean) as string[];
+
+    setEditingDoctor({
+      id: doctor.id,
+      name: doctor.name,
+      treatmentIds,
+    });
+    setIsEditDoctorModalOpen(true);
+  };
+
+  // 儲存編輯醫師
+  const handleSaveDoctor = async (doctorData: { id: string; name: string; treatmentIds: string[] }) => {
+    try {
+      const response = await fetch(`/api/admin/doctors/${doctorData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: doctorData.name,
+          treatmentIds: doctorData.treatmentIds,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        await mutate();
+      } else {
+        setLocalError(result.error?.message || '更新醫師失敗');
+      }
+    } catch (err) {
+      console.error('更新醫師失敗:', err);
+      setLocalError('更新醫師失敗');
+    }
   };
 
   // 新增診療項目
@@ -611,26 +661,46 @@ export default function SettingsPage() {
                 {doctors.map((doctor) => (
                   <div
                     key={doctor.id}
-                    className="bg-white border border-neutral-200 rounded-xl px-4 py-3 min-w-[140px]"
+                    className="bg-white border border-neutral-200 rounded-xl px-4 py-3 min-w-[140px] cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => handleEditDoctor(doctor)}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-neutral-900">
                         {doctor.name}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteDoctor(doctor.id)}
-                        className="p-1 hover:bg-neutral-100 rounded transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4 text-neutral-400" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditDoctor(doctor);
+                          }}
+                          className="p-1 hover:bg-neutral-100 rounded transition-colors"
+                        >
+                          <Pencil className="w-4 h-4 text-neutral-400" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDoctor(doctor.id);
+                          }}
+                          className="p-1 hover:bg-neutral-100 rounded transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-neutral-400" />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {doctor.treatments.map((treatment, idx) => (
-                        <span key={idx} className="text-xs text-neutral-500">
-                          {treatment}
-                        </span>
-                      ))}
+                      {doctor.treatments.length > 0 ? (
+                        doctor.treatments.map((treatment, idx) => (
+                          <span key={idx} className="text-xs text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded">
+                            {treatment}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-neutral-400">未設定診療項目</span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -971,6 +1041,23 @@ export default function SettingsPage() {
         }}
         onConfirm={handleConfirmDeleteDoctor}
         doctorName={doctors.find((d) => d.id === deletingDoctorId)?.name}
+      />
+
+      {/* 編輯醫師 Modal */}
+      <EditDoctorModal
+        isOpen={isEditDoctorModalOpen}
+        onClose={() => {
+          setIsEditDoctorModalOpen(false);
+          setEditingDoctor(null);
+        }}
+        onSave={handleSaveDoctor}
+        onDelete={(id) => {
+          setIsEditDoctorModalOpen(false);
+          setEditingDoctor(null);
+          handleDeleteDoctor(id);
+        }}
+        initialData={editingDoctor}
+        treatmentOptions={treatmentOptions}
       />
 
       {/* 編輯帳號 Modal */}
