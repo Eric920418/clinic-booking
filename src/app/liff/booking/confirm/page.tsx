@@ -6,7 +6,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, Clock, User, MapPin, Phone } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Phone, AlertCircle } from 'lucide-react';
+import { useLiffAuth } from '@/contexts/LiffAuthContext';
 
 interface BookingData {
   doctor: { id: string; name: string } | null;
@@ -29,6 +30,7 @@ const CLINIC_INFO = {
 
 export default function ConfirmBookingPage() {
   const router = useRouter();
+  const { isLoggedIn, lineProfile, login, isLiffReady } = useLiffAuth();
   const [bookingData, setBookingData] = useState<BookingData>({
     doctor: null,
     date: null,
@@ -37,6 +39,7 @@ export default function ConfirmBookingPage() {
     profile: null,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isLineLoginRequired, setIsLineLoginRequired] = useState(false);
 
   useEffect(() => {
     // 從 sessionStorage 讀取預約資料
@@ -55,6 +58,18 @@ export default function ConfirmBookingPage() {
     });
   }, []);
 
+  // 檢查 LINE 登入狀態
+  useEffect(() => {
+    // 檢查 localStorage 是否有 lineUserId（可能來自之前的登入）
+    const lineUserId = localStorage.getItem('lineUserId');
+    // 如果沒有登入 LINE 且沒有已存的 lineUserId，標記需要登入
+    if (!isLoggedIn && !lineUserId) {
+      setIsLineLoginRequired(true);
+    } else {
+      setIsLineLoginRequired(false);
+    }
+  }, [isLoggedIn]);
+
   // 格式化日期為民國年格式
   const formatDate = (date: Date | null) => {
     if (!date) return '';
@@ -66,19 +81,29 @@ export default function ConfirmBookingPage() {
     return `${year}年${month}月${day}日 星期${weekday}`;
   };
 
+  // LINE 登入處理
+  const handleLineLogin = async () => {
+    if (!isLiffReady) {
+      alert('LIFF 尚未準備完成，請稍後再試');
+      return;
+    }
+    await login();
+  };
+
   // 送出預約
   const handleSubmit = async () => {
+    // 取得 LINE User ID
+    const lineUserId = localStorage.getItem('lineUserId') || localStorage.getItem('mockLineUserId');
+
+    // 如果沒有 LINE User ID，觸發登入流程
+    if (!lineUserId) {
+      await handleLineLogin();
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // 取得 LINE User ID
-      const lineUserId = localStorage.getItem('lineUserId') || localStorage.getItem('mockLineUserId');
-
-      if (!lineUserId) {
-        alert('請先登入 LINE');
-        setIsLoading(false);
-        return;
-      }
 
       if (!bookingData.doctor || !bookingData.date || !bookingData.timeSlot || !bookingData.treatment) {
         alert('預約資料不完整');
@@ -216,6 +241,34 @@ export default function ConfirmBookingPage() {
           </div>
         </div>
 
+        {/* LINE 登入提示 - 未登入時顯示 */}
+        {isLineLoginRequired && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-amber-800 mb-1">
+                  需要 LINE 登入
+                </p>
+                <p className="text-sm text-amber-700 mb-3">
+                  為了發送預約確認通知，請先登入 LINE 帳號
+                </p>
+                <button
+                  type="button"
+                  onClick={handleLineLogin}
+                  disabled={!isLiffReady}
+                  className="w-full h-10 bg-[#06C755] hover:bg-[#05b34c] disabled:bg-neutral-300 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-2 transition-all"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5.46 7.12c0 2.47-2.49 4.48-5.46 4.48-.25 0-.5-.01-.74-.03l-1.5 1.08c-.08.06-.18.09-.28.09-.15 0-.29-.07-.38-.19-.13-.17-.11-.41.04-.56l1.08-1.2c-1.89-.67-3.22-2.11-3.22-3.67 0-2.47 2.49-4.48 5.46-4.48s5.46 2.01 5.46 4.48z"/>
+                  </svg>
+                  使用 LINE 登入
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Spacer */}
         <div className="flex-1" />
 
@@ -225,10 +278,10 @@ export default function ConfirmBookingPage() {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isLoading}
+            disabled={isLoading || isLineLoginRequired}
             className="w-full h-12 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-300 text-white font-bold text-base rounded-xl shadow-[0px_6px_29px_0px_rgba(0,0,0,0.1),0px_4px_8px_0px_rgba(0,0,0,0.05),0px_2px_8px_0px_rgba(0,0,0,0.05)] transition-all disabled:shadow-none"
           >
-            {isLoading ? '送出中...' : '確認並送出預約'}
+            {isLoading ? '送出中...' : isLineLoginRequired ? '請先登入 LINE' : '確認並送出預約'}
           </button>
 
           {/* 返回修改按鈕 */}
