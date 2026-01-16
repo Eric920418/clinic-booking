@@ -283,3 +283,147 @@ export async function GET(
     }, { status: 500 })
   }
 }
+
+// =============================================
+// DELETE: 刪除特定時段
+// 根據醫師、日期、時段類型刪除
+// =============================================
+const deleteScheduleSchema = z.object({
+  doctorId: z.string().min(1, '請選擇醫師'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必須為 YYYY-MM-DD'),
+  timeSlotType: z.enum(['morning', 'afternoon', 'evening']),
+})
+
+export async function DELETE(
+  request: NextRequest
+): Promise<NextResponse<ApiResponse>> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '未登入' },
+      }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const parsed = deleteScheduleSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: parsed.error.issues[0].message },
+      }, { status: 400 })
+    }
+
+    const { doctorId, date, timeSlotType } = parsed.data
+    const scheduleDate = new Date(date)
+
+    // 取得時段配置
+    const slotConfig = TIME_SLOT_CONFIGS[timeSlotType]
+    const startMinutes = slotConfig.startHour * 60 + slotConfig.startMinute
+    const endMinutes = slotConfig.endHour * 60 + slotConfig.endMinute
+
+    // 查詢班表
+    const schedule = await prisma.schedule.findUnique({
+      where: {
+        doctorId_date: {
+          doctorId,
+          date: scheduleDate,
+        },
+      },
+      include: {
+        timeSlots: {
+          include: {
+            appointments: {
+              where: {
+                status: { in: ['booked', 'checked_in'] },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!schedule) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '該日期沒有班表' },
+      }, { status: 404 })
+    }
+
+    // 找出要刪除的時段（根據時間範圍）
+    const slotsToDelete = schedule.timeSlots.filter((slot) => {
+      const slotStartMinutes = slot.startTime.getHours() * 60 + slot.startTime.getMinutes()
+      return slotStartMinutes >= startMinutes && slotStartMinutes < endMinutes
+    })
+
+    if (slotsToDelete.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '該時段不存在' },
+      }, { status: 404 })
+    }
+
+    // 檢查是否有進行中的預約
+    const hasActiveAppointments = slotsToDelete.some(
+      slot => slot.appointments.length > 0
+    )
+
+    if (hasActiveAppointments) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '該時段有進行中的預約，無法刪除' },
+      }, { status: 400 })
+    }
+
+    // 刪除時段
+    await prisma.timeSlot.deleteMany({
+      where: {
+        id: { in: slotsToDelete.map((s) => s.id) },
+      },
+    })
+
+    // 檢查班表是否還有其他時段，如果沒有則刪除班表
+    const remainingSlots = await prisma.timeSlot.count({
+      where: { scheduleId: schedule.id },
+    })
+
+    if (remainingSlots === 0) {
+      await prisma.schedule.delete({
+        where: { id: schedule.id },
+      })
+    }
+
+    // 記錄操作日誌
+    await prisma.operationLog.create({
+      data: {
+        adminUserId: user.userId,
+        action: 'DELETE_TIME_SLOTS',
+        targetType: 'schedule',
+        targetId: schedule.id,
+        details: {
+          doctorId,
+          date,
+          timeSlotType,
+          deletedSlotCount: slotsToDelete.length,
+        },
+      },
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        message: `已刪除 ${slotsToDelete.length} 個時段`,
+        deletedSlotCount: slotsToDelete.length,
+      },
+    })
+
+  } catch (error) {
+    console.error('[DELETE /api/admin/schedules]', error)
+    return NextResponse.json({
+      success: false,
+      error: { code: 'E001', message: '刪除班表失敗' },
+    }, { status: 500 })
+  }
+}

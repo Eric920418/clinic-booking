@@ -321,6 +321,68 @@ export default function SchedulesPage() {
     }
   };
 
+  // 刪除班表（直接使用已選擇的醫師、時段、日期）
+  const handleDeleteSchedule = async () => {
+    if (selectedDoctorIds.length === 0) {
+      setLocalError('請先選擇醫師');
+      return;
+    }
+    if (selectedTimeSlots.length === 0) {
+      setLocalError('請先選擇時段');
+      return;
+    }
+    if (selectedDates.length === 0) {
+      setLocalError('請先在日曆上選擇日期');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setLocalError(null);
+    const westernYear = currentYear + 1911;
+    let successCount = 0;
+    let errorMessage = '';
+
+    try {
+      // 為每個醫師、每個日期、每個時段組合刪除班表
+      for (const doctorId of selectedDoctorIds) {
+        for (const day of selectedDates) {
+          for (const timeSlotType of selectedTimeSlots) {
+            const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const response = await fetch('/api/admin/schedules', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                doctorId,
+                date: dateStr,
+                timeSlotType,
+              }),
+            });
+            const result = await response.json();
+            if (result.success) {
+              successCount++;
+            } else {
+              // 記錄錯誤但繼續處理其他組合
+              errorMessage = result.error?.message || '刪除班表失敗';
+            }
+          }
+        }
+      }
+      await mutate();
+      setSelectedDates([]);
+
+      if (successCount > 0 && errorMessage) {
+        setLocalError(`已刪除 ${successCount} 筆班表，部分失敗：${errorMessage}`);
+      } else if (errorMessage) {
+        setLocalError(errorMessage);
+      }
+    } catch (err) {
+      console.error('刪除班表失敗:', err);
+      setLocalError('刪除班表失敗');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // 臨時休診（將選中的班表設為不可用）
   const handleSetUnavailable = async () => {
     if (selectedDates.length === 0) {
@@ -565,7 +627,15 @@ export default function SchedulesPage() {
                 disabled={isSubmitting || selectedDoctorIds.length === 0 || selectedTimeSlots.length === 0 || selectedDates.length === 0}
                 className="h-10 px-4 bg-primary hover:bg-primary-600 disabled:bg-neutral-300 text-white font-medium text-sm rounded-lg transition-colors"
               >
-                {isSubmitting ? '新增中...' : '新增班表'}
+                {isSubmitting ? '處理中...' : '新增班表'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSchedule}
+                disabled={isSubmitting || selectedDoctorIds.length === 0 || selectedTimeSlots.length === 0 || selectedDates.length === 0}
+                className="h-10 px-4 bg-error hover:bg-error/90 disabled:bg-neutral-300 text-white font-medium text-sm rounded-lg transition-colors"
+              >
+                {isSubmitting ? '處理中...' : '刪除班表'}
               </button>
             </div>
           </div>
