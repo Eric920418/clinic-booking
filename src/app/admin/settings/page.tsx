@@ -243,20 +243,6 @@ export default function SettingsPage() {
   const saveEditDoctor = async () => {
     if (!editingDoctorId || !editingDoctorName.trim()) return;
 
-    // 驗證 UUID 格式
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(editingDoctorId)) {
-      setLocalError(`醫師 ID 格式無效: ${editingDoctorId}`);
-      return;
-    }
-
-    // 驗證所有 treatmentIds
-    const invalidIds = editingDoctorTreatments.filter(id => !uuidRegex.test(id));
-    if (invalidIds.length > 0) {
-      setLocalError(`診療項目 ID 格式無效: ${invalidIds.join(', ')}`);
-      return;
-    }
-
     try {
       const response = await fetch(`/api/admin/doctors/${editingDoctorId}`, {
         method: 'PUT',

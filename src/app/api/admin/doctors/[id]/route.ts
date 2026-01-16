@@ -14,7 +14,7 @@ interface RouteParams {
 // 驗證 Schema
 const updateDoctorSchema = z.object({
   name: z.string().min(2, '姓名至少 2 字元').max(20, '姓名不可超過 20 字元'),
-  treatmentIds: z.array(z.string().uuid('診療項目 ID 格式無效')).optional(),
+  treatmentIds: z.array(z.string().min(1, '診療項目 ID 不可為空')).optional(),
 })
 
 /**
