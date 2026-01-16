@@ -57,10 +57,7 @@ export default function SchedulesPage() {
   // 選中的時段（日檢視用）
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
 
-  // Modal 狀態
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addScheduleDoctorId, setAddScheduleDoctorId] = useState('');
-  const [addScheduleTimeSlot, setAddScheduleTimeSlot] = useState('morning');
+  // 操作狀態
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -262,40 +259,60 @@ export default function SchedulesPage() {
     });
   };
 
-  // 新增班表
+  // 新增班表（直接使用已選擇的醫師、時段、日期）
   const handleAddSchedule = async () => {
-    if (!addScheduleDoctorId || selectedDates.length === 0) {
-      setLocalError('請選擇醫師和日期');
+    if (selectedDoctorIds.length === 0) {
+      setLocalError('請先選擇醫師');
+      return;
+    }
+    if (selectedTimeSlots.length === 0) {
+      setLocalError('請先選擇時段');
+      return;
+    }
+    if (selectedDates.length === 0) {
+      setLocalError('請先在日曆上選擇日期');
       return;
     }
 
     setIsSubmitting(true);
     setLocalError(null);
     const westernYear = currentYear + 1911;
+    let successCount = 0;
+    let errorMessage = '';
 
     try {
-      for (const day of selectedDates) {
-        const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const response = await fetch('/api/admin/schedules', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            doctorId: addScheduleDoctorId,
-            date: dateStr,
-            timeSlotType: addScheduleTimeSlot,
-          }),
-        });
-        const result = await response.json();
-        if (!result.success) {
-          setLocalError(result.error?.message || '新增班表失敗');
-          break;
+      // 為每個醫師、每個日期、每個時段組合創建班表
+      for (const doctorId of selectedDoctorIds) {
+        for (const day of selectedDates) {
+          for (const timeSlotType of selectedTimeSlots) {
+            const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const response = await fetch('/api/admin/schedules', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                doctorId,
+                date: dateStr,
+                timeSlotType,
+              }),
+            });
+            const result = await response.json();
+            if (result.success) {
+              successCount++;
+            } else {
+              // 記錄錯誤但繼續處理其他組合
+              errorMessage = result.error?.message || '新增班表失敗';
+            }
+          }
         }
       }
       await mutate();
-      setShowAddModal(false);
       setSelectedDates([]);
-      setAddScheduleDoctorId('');
-      setAddScheduleTimeSlot('morning');
+
+      if (successCount > 0 && errorMessage) {
+        setLocalError(`已新增 ${successCount} 筆班表，部分失敗：${errorMessage}`);
+      } else if (errorMessage) {
+        setLocalError(errorMessage);
+      }
     } catch (err) {
       console.error('新增班表失敗:', err);
       setLocalError('新增班表失敗');
@@ -573,10 +590,11 @@ export default function SchedulesPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowAddModal(true)}
-                className="h-10 px-4 bg-primary hover:bg-primary-600 text-white font-medium text-sm rounded-lg transition-colors"
+                onClick={handleAddSchedule}
+                disabled={isSubmitting || selectedDoctorIds.length === 0 || selectedTimeSlots.length === 0 || selectedDates.length === 0}
+                className="h-10 px-4 bg-primary hover:bg-primary-600 disabled:bg-neutral-300 text-white font-medium text-sm rounded-lg transition-colors"
               >
-                新增班表
+                {isSubmitting ? '新增中...' : '新增班表'}
               </button>
             </div>
           </div>
@@ -701,7 +719,7 @@ export default function SchedulesPage() {
               {/* 選擇醫師 */}
               <div className="bg-white rounded-xl border border-neutral-200 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm text-neutral-500">選擇醫師</label>
+                  <label className="text-sm text-neutral-500">步驟一：選擇醫師</label>
                 </div>
                 <div className="relative">
                   <button
@@ -992,109 +1010,6 @@ export default function SchedulesPage() {
         )}
       </div>
 
-      {/* 新增班表 Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-md mx-4 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-neutral-900">新增班表</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddModal(false);
-                  setAddScheduleDoctorId('');
-                  setAddScheduleTimeSlot('morning');
-                }}
-                className="p-1 hover:bg-neutral-100 rounded-lg"
-              >
-                <X className="w-5 h-5 text-neutral-500" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* 選擇醫師 */}
-              <div>
-                <label className="text-sm text-neutral-500 mb-2 block">步驟一：選擇醫師</label>
-                {doctors.filter(d => d.isActive).length === 0 ? (
-                  <p className="text-sm text-red-500 py-2">目前沒有啟用的醫師，請先至系統設定啟用醫師</p>
-                ) : (
-                  <select
-                    value={addScheduleDoctorId}
-                    onChange={(e) => setAddScheduleDoctorId(e.target.value)}
-                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
-                  >
-                    <option value="">請選擇醫師</option>
-                    {doctors.filter(d => d.isActive).map((doctor) => (
-                      <option key={doctor.id} value={doctor.id}>
-                        {doctor.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {/* 選擇時段 */}
-              <div>
-                <label className="text-sm text-neutral-500 mb-2 block">步驟二：選擇時段</label>
-                <select
-                  value={addScheduleTimeSlot}
-                  onChange={(e) => setAddScheduleTimeSlot(e.target.value)}
-                  className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
-                >
-                  {TIME_SLOT_OPTIONS.map((slot) => (
-                    <option key={slot.id} value={slot.id}>
-                      {slot.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 已選日期 */}
-              <div>
-                <label className="text-sm text-neutral-500 mb-2 block">
-                  已選日期 {selectedDates.length > 0 && `(${selectedDates.length} 天)`}
-                </label>
-                {selectedDates.length === 0 ? (
-                  <p className="text-sm text-neutral-400">請在日曆上點選日期</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDates.sort((a, b) => a - b).map((day) => (
-                      <span
-                        key={day}
-                        className="px-2 py-1 bg-primary/10 text-primary text-sm rounded"
-                      >
-                        {currentMonth}/{day}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddModal(false);
-                  setAddScheduleDoctorId('');
-                  setAddScheduleTimeSlot('morning');
-                }}
-                className="flex-1 h-10 bg-white hover:bg-neutral-50 text-neutral-700 font-medium text-sm rounded-lg border border-neutral-300"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                onClick={handleAddSchedule}
-                disabled={!addScheduleDoctorId || selectedDates.length === 0 || isSubmitting}
-                className="flex-1 h-10 bg-primary hover:bg-primary-600 disabled:bg-neutral-300 text-white font-medium text-sm rounded-lg"
-              >
-                {isSubmitting ? '處理中...' : '確認新增'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
