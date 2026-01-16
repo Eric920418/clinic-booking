@@ -66,16 +66,34 @@ export default function SchedulesPage() {
   const { data: settingsData } = useSettings();
   const doctors: Doctor[] = settingsData?.doctors || [];
 
-  // 計算日期範圍
+  // 格式化日期為 YYYY-MM-DD（使用本地時區，避免 toISOString 的 UTC 轉換問題）
+  const formatDateStr = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // 計算日期範圍（根據視圖模式動態計算）
   const dateRange = useMemo(() => {
+    if (viewMode === 'day') {
+      // 日視圖：載入當日所在月份的資料
+      const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      return {
+        startDate: formatDateStr(startDate),
+        endDate: formatDateStr(endDate),
+      };
+    }
+    // 週/月視圖：使用 currentYear 和 currentMonth
     const westernYear = currentYear + 1911;
     const startDate = new Date(westernYear, currentMonth - 1, 1);
     const endDate = new Date(westernYear, currentMonth, 0);
     return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: formatDateStr(startDate),
+      endDate: formatDateStr(endDate),
     };
-  }, [currentYear, currentMonth]);
+  }, [currentYear, currentMonth, currentDate, viewMode]);
 
   const { data: schedulesData, error: swrError, isLoading, mutate } = useSchedules(dateRange);
 
@@ -515,7 +533,7 @@ export default function SchedulesPage() {
 
   // 取得當日班表（日檢視用）
   const getDaySchedules = () => {
-    const dateStr = currentDate.toISOString().split('T')[0];
+    const dateStr = formatDateStr(currentDate);
     let daySchedules = schedules.filter((s) => s.date === dateStr);
     // 根據選中的醫師過濾
     if (selectedDoctorIds.length > 0) {
@@ -934,7 +952,7 @@ export default function SchedulesPage() {
                     {weekDays.map((date, index) => {
                       const day = date.getDate();
                       const isSelected = selectedDates.includes(day);
-                      let daySchedules = schedules.filter((s) => s.date === date.toISOString().split('T')[0]);
+                      let daySchedules = schedules.filter((s) => s.date === formatDateStr(date));
                       // 根據選中的醫師過濾
                       if (selectedDoctorIds.length > 0) {
                         daySchedules = daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
