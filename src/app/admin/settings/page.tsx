@@ -11,7 +11,6 @@ import EditTreatmentModal from '@/components/admin/EditTreatmentModal';
 import DeleteDoctorModal from '@/components/admin/DeleteDoctorModal';
 import EditAccountModal from '@/components/admin/EditAccountModal';
 import AddAppointmentModal from '@/components/admin/AddAppointmentModal';
-import EditDoctorModal from '@/components/admin/EditDoctorModal';
 import { useSettings } from '@/lib/api';
 
 // 分頁類型
@@ -123,13 +122,11 @@ export default function SettingsPage() {
   const [isDeleteDoctorModalOpen, setIsDeleteDoctorModalOpen] = useState(false);
   const [deletingDoctorId, setDeletingDoctorId] = useState<string | null>(null);
 
-  // 編輯醫師 Modal 狀態
-  const [isEditDoctorModalOpen, setIsEditDoctorModalOpen] = useState(false);
-  const [editingDoctor, setEditingDoctor] = useState<{
-    id: string;
-    name: string;
-    treatmentIds: string[];
-  } | null>(null);
+  // 內聯編輯醫師狀態
+  const [editingDoctorId, setEditingDoctorId] = useState<string | null>(null);
+  const [editingDoctorName, setEditingDoctorName] = useState('');
+  const [editingDoctorTreatments, setEditingDoctorTreatments] = useState<string[]>([]);
+  const [showEditTreatmentDropdown, setShowEditTreatmentDropdown] = useState(false);
 
   // 帳號管理狀態
   const [accountUsername, setAccountUsername] = useState('');
@@ -211,31 +208,48 @@ export default function SettingsPage() {
     setDeletingDoctorId(null);
   };
 
-  // 開啟編輯醫師 Modal
-  const handleEditDoctor = (doctor: Doctor) => {
+  // 開始內聯編輯醫師
+  const startEditDoctor = (doctor: Doctor) => {
     // 從 API 資料中取得該醫師的診療項目 IDs
     const apiDoctor = data?.doctors?.find(d => d.id === doctor.id);
     const treatmentIds = (apiDoctor?.doctorTreatments || [])
       .map(dt => dt.treatmentType?.id)
       .filter(Boolean) as string[];
 
-    setEditingDoctor({
-      id: doctor.id,
-      name: doctor.name,
-      treatmentIds,
-    });
-    setIsEditDoctorModalOpen(true);
+    setEditingDoctorId(doctor.id);
+    setEditingDoctorName(doctor.name);
+    setEditingDoctorTreatments(treatmentIds);
+    setShowEditTreatmentDropdown(false);
+  };
+
+  // 取消編輯醫師
+  const cancelEditDoctor = () => {
+    setEditingDoctorId(null);
+    setEditingDoctorName('');
+    setEditingDoctorTreatments([]);
+    setShowEditTreatmentDropdown(false);
+  };
+
+  // 切換編輯中的診療項目選擇
+  const toggleEditDoctorTreatment = (treatmentId: string) => {
+    setEditingDoctorTreatments(prev =>
+      prev.includes(treatmentId)
+        ? prev.filter(id => id !== treatmentId)
+        : [...prev, treatmentId]
+    );
   };
 
   // 儲存編輯醫師
-  const handleSaveDoctor = async (doctorData: { id: string; name: string; treatmentIds: string[] }) => {
+  const saveEditDoctor = async () => {
+    if (!editingDoctorId || !editingDoctorName.trim()) return;
+
     try {
-      const response = await fetch(`/api/admin/doctors/${doctorData.id}`, {
+      const response = await fetch(`/api/admin/doctors/${editingDoctorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: doctorData.name,
-          treatmentIds: doctorData.treatmentIds,
+          name: editingDoctorName,
+          treatmentIds: editingDoctorTreatments,
         }),
       });
 
@@ -243,6 +257,7 @@ export default function SettingsPage() {
 
       if (result.success) {
         await mutate();
+        cancelEditDoctor();
       } else {
         setLocalError(result.error?.message || '更新醫師失敗');
       }
@@ -658,27 +673,119 @@ export default function SettingsPage() {
 
               {/* 醫師卡片列表 */}
               <div className="flex flex-wrap gap-4">
-                {doctors.map((doctor) => (
-                  <div
-                    key={doctor.id}
-                    className="bg-white border border-neutral-200 rounded-xl px-4 py-3 min-w-[140px] cursor-pointer hover:border-primary transition-colors"
-                    onClick={() => handleEditDoctor(doctor)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-neutral-900">
-                        {doctor.name}
-                      </span>
-                      <div className="flex items-center gap-1">
+                {doctors.map((doctor) =>
+                  editingDoctorId === doctor.id ? (
+                    /* 編輯模式 */
+                    <div
+                      key={doctor.id}
+                      className="bg-white border-2 border-primary rounded-xl px-4 py-3 min-w-[200px]"
+                    >
+                      {/* 名稱輸入 */}
+                      <input
+                        type="text"
+                        value={editingDoctorName}
+                        onChange={(e) => setEditingDoctorName(e.target.value)}
+                        className="w-full h-9 px-2 mb-2 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm font-medium focus:outline-none focus:border-primary"
+                        autoFocus
+                      />
+
+                      {/* 診療項目選擇 */}
+                      <div className="relative mb-3">
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditDoctor(doctor);
-                          }}
-                          className="p-1 hover:bg-neutral-100 rounded transition-colors"
+                          onClick={() => setShowEditTreatmentDropdown(!showEditTreatmentDropdown)}
+                          className="w-full h-9 px-2 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                         >
-                          <Pencil className="w-4 h-4 text-neutral-400" />
+                          <span className="text-neutral-700 truncate">
+                            {editingDoctorTreatments.length > 0
+                              ? `已選 ${editingDoctorTreatments.length} 項`
+                              : '選擇項目'}
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                         </button>
+                        {showEditTreatmentDropdown && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
+                            {treatmentOptions.map((option) => {
+                              const isSelected = editingDoctorTreatments.includes(option.value);
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => toggleEditDoctorTreatment(option.value)}
+                                  className="w-full px-2 py-1.5 flex items-center gap-2 text-sm hover:bg-neutral-50"
+                                >
+                                  <div
+                                    className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                                      isSelected ? 'border-primary bg-primary' : 'border-neutral-300'
+                                    }`}
+                                  >
+                                    {isSelected && (
+                                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <span className={isSelected ? 'text-primary font-medium' : 'text-neutral-700'}>
+                                    {option.label}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 已選項目標籤 */}
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {editingDoctorTreatments.map((id) => {
+                          const treatment = treatmentOptions.find(t => t.value === id);
+                          return treatment ? (
+                            <span key={id} className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded">
+                              {treatment.label}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+
+                      {/* 操作按鈕 */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={saveEditDoctor}
+                          className="flex-1 h-8 bg-primary hover:bg-primary-600 text-white text-xs font-medium rounded-lg transition-colors"
+                        >
+                          儲存
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEditDoctor}
+                          className="flex-1 h-8 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-medium rounded-lg transition-colors"
+                        >
+                          取消
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            cancelEditDoctor();
+                            handleDeleteDoctor(doctor.id);
+                          }}
+                          className="h-8 px-2 hover:bg-neutral-100 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-neutral-400" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* 顯示模式 */
+                    <div
+                      key={doctor.id}
+                      className="bg-white border border-neutral-200 rounded-xl px-4 py-3 min-w-[140px] cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => startEditDoctor(doctor)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-neutral-900">
+                          {doctor.name}
+                        </span>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -690,20 +797,20 @@ export default function SettingsPage() {
                           <Trash2 className="w-4 h-4 text-neutral-400" />
                         </button>
                       </div>
+                      <div className="flex flex-wrap gap-1">
+                        {doctor.treatments.length > 0 ? (
+                          doctor.treatments.map((treatment, idx) => (
+                            <span key={idx} className="text-xs text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded">
+                              {treatment}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-neutral-400">未設定診療項目</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      {doctor.treatments.length > 0 ? (
-                        doctor.treatments.map((treatment, idx) => (
-                          <span key={idx} className="text-xs text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded">
-                            {treatment}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-neutral-400">未設定診療項目</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </section>
 
@@ -1041,23 +1148,6 @@ export default function SettingsPage() {
         }}
         onConfirm={handleConfirmDeleteDoctor}
         doctorName={doctors.find((d) => d.id === deletingDoctorId)?.name}
-      />
-
-      {/* 編輯醫師 Modal */}
-      <EditDoctorModal
-        isOpen={isEditDoctorModalOpen}
-        onClose={() => {
-          setIsEditDoctorModalOpen(false);
-          setEditingDoctor(null);
-        }}
-        onSave={handleSaveDoctor}
-        onDelete={(id) => {
-          setIsEditDoctorModalOpen(false);
-          setEditingDoctor(null);
-          handleDeleteDoctor(id);
-        }}
-        initialData={editingDoctor}
-        treatmentOptions={treatmentOptions}
       />
 
       {/* 編輯帳號 Modal */}
