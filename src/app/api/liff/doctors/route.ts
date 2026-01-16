@@ -53,6 +53,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       where: whereClause,
       include: {
         doctorTreatments: {
+          where: {
+            treatmentType: { isActive: true },
+          },
           include: {
             treatmentType: {
               select: {

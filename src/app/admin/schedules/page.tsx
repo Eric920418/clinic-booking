@@ -517,9 +517,6 @@ export default function SchedulesPage() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm text-neutral-500">選擇醫師</label>
-                <span className="text-sm text-primary font-medium">
-                  {selectedDoctorIds.length === 0 ? doctors.length : selectedDoctorIds.length}/{doctors.length}
-                </span>
               </div>
               <div className="relative w-64">
                 <button
@@ -630,9 +627,6 @@ export default function SchedulesPage() {
               <div className="bg-white rounded-xl border border-neutral-200 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm text-neutral-500">選擇醫師</label>
-                  <span className="text-sm text-primary font-medium">
-                    {selectedDoctorIds.length}/{doctors.length}
-                  </span>
                 </div>
                 <div className="relative">
                   <button
@@ -706,7 +700,6 @@ export default function SchedulesPage() {
               <div className="bg-white rounded-xl border border-neutral-200 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm text-neutral-500">選擇時段</label>
-                  <span className="text-sm text-primary font-medium">0/5</span>
                 </div>
                 <div className="relative">
                   <button

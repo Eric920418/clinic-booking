@@ -1,23 +1,46 @@
 /**
  * 選擇診療項目頁面
- * 用戶選擇要預約的診療類型：初診、內科、針灸
+ * 顯示選中醫師可看診的項目
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Circle, CheckCircle2 } from 'lucide-react';
 
-// 診療項目資料（對應 README 中的診療項目）
-const TREATMENT_TYPES = [
-  { id: 'first_visit', name: '初診', minutes: 10, note: '首次就診' },
-  { id: 'internal', name: '內科', minutes: 5, note: '一般內科診療' },
-  { id: 'acupuncture', name: '針灸', minutes: 5, note: '針灸治療' },
-];
+// 診療項目型別
+interface TreatmentType {
+  id: string;
+  name: string;
+  durationMinutes: number;
+}
+
+// 選中的醫師資料
+interface SelectedDoctor {
+  id: string;
+  name: string;
+  treatments: TreatmentType[];
+}
 
 export default function SelectTreatmentPage() {
   const router = useRouter();
   const [selectedTreatment, setSelectedTreatment] = useState<string | null>(null);
+  const [doctor, setDoctor] = useState<SelectedDoctor | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // 從 sessionStorage 讀取選中的醫師資料
+  useEffect(() => {
+    const storedDoctor = sessionStorage.getItem('selectedDoctor');
+    if (storedDoctor) {
+      try {
+        const parsed = JSON.parse(storedDoctor) as SelectedDoctor;
+        setDoctor(parsed);
+      } catch (err) {
+        console.error('解析醫師資料失敗:', err);
+      }
+    }
+    setLoading(false);
+  }, []);
 
   // 選擇診療項目
   const handleSelectTreatment = (treatmentId: string) => {
@@ -26,17 +49,58 @@ export default function SelectTreatmentPage() {
 
   // 查詢可預約時段
   const handleQueryTimeSlots = () => {
-    if (!selectedTreatment) return;
+    if (!selectedTreatment || !doctor) return;
 
-    const treatment = TREATMENT_TYPES.find(t => t.id === selectedTreatment);
+    const treatment = doctor.treatments.find(t => t.id === selectedTreatment);
     sessionStorage.setItem('selectedTreatment', JSON.stringify({
       id: selectedTreatment,
       name: treatment?.name,
-      minutes: treatment?.minutes,
+      minutes: treatment?.durationMinutes,
     }));
 
     router.push('/liff/booking/time-slot');
   };
+
+  // 載入中
+  if (loading) {
+    return (
+      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center">
+        <div className="text-neutral-500">載入中...</div>
+      </div>
+    );
+  }
+
+  // 沒有醫師資料
+  if (!doctor) {
+    return (
+      <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col items-center justify-center px-4">
+        <div className="text-neutral-500 mb-4">請先選擇醫師</div>
+        <button
+          type="button"
+          onClick={() => router.push('/liff/booking/doctor')}
+          className="px-6 py-2 bg-primary-500 text-white rounded-lg"
+        >
+          返回選擇醫師
+        </button>
+      </div>
+    );
+  }
+
+  // 醫師沒有診療項目
+  if (!doctor.treatments || doctor.treatments.length === 0) {
+    return (
+      <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col items-center justify-center px-4">
+        <div className="text-neutral-500 mb-4">{doctor.name} 醫師目前沒有可預約的診療項目</div>
+        <button
+          type="button"
+          onClick={() => router.push('/liff/booking/doctor')}
+          className="px-6 py-2 bg-primary-500 text-white rounded-lg"
+        >
+          返回選擇其他醫師
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col">
@@ -48,13 +112,13 @@ export default function SelectTreatmentPage() {
               診療項目
             </h1>
             <p className="text-sm text-neutral-500">
-              請依照您的需求選擇診療項目
+              {doctor.name} 醫師可看診項目
             </p>
           </div>
 
           {/* 診療項目列表 */}
           <div className="space-y-3">
-            {TREATMENT_TYPES.map((treatment) => (
+            {doctor.treatments.map((treatment) => (
               <button
                 key={treatment.id}
                 type="button"
@@ -70,7 +134,7 @@ export default function SelectTreatmentPage() {
                     {treatment.name}
                   </div>
                   <div className="text-sm text-neutral-500">
-                    {treatment.note}
+                    約 {treatment.durationMinutes} 分鐘
                   </div>
                 </div>
                 {selectedTreatment === treatment.id ? (

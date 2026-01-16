@@ -8,11 +8,19 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Circle, CheckCircle2 } from 'lucide-react';
 
+// 診療項目型別
+interface TreatmentType {
+  id: string;
+  name: string;
+  durationMinutes: number;
+}
+
 // 醫師型別
 interface Doctor {
   id: string;
   name: string;
   note: string;
+  treatments: TreatmentType[];
 }
 
 // 星期標籤
@@ -37,10 +45,11 @@ export default function SelectDoctorAndDatePage() {
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
-            setDoctors(result.data.map((d: { id: string; name: string; treatmentTypes?: { name: string }[] }) => ({
+            setDoctors(result.data.map((d: { id: string; name: string; treatmentTypes?: { id: string; name: string; durationMinutes: number }[] }) => ({
               id: d.id,
               name: d.name,
-              note: d.treatmentTypes?.map((t: { name: string }) => t.name).join('、') || '',
+              note: d.treatmentTypes?.map((t) => t.name).join('、') || '',
+              treatments: d.treatmentTypes || [],
             })));
           }
         } else {
@@ -108,12 +117,13 @@ export default function SelectDoctorAndDatePage() {
 
     setSelectedDate(date);
 
-    // 如果已選擇醫師，跳轉到時段選擇
+    // 如果已選擇醫師，跳轉到診療項目選擇
     if (selectedDoctor) {
       const doctor = doctors.find(d => d.id === selectedDoctor);
       sessionStorage.setItem('selectedDoctor', JSON.stringify({
         id: selectedDoctor,
         name: doctor?.name,
+        treatments: doctor?.treatments || [],
       }));
       sessionStorage.setItem('selectedDate', date.toISOString());
 
@@ -125,12 +135,13 @@ export default function SelectDoctorAndDatePage() {
   const handleSelectDoctor = (doctorId: string) => {
     setSelectedDoctor(doctorId);
 
-    // 如果已選擇日期，跳轉到時段選擇
+    // 如果已選擇日期，跳轉到診療項目選擇
     if (selectedDate) {
       const doctor = doctors.find(d => d.id === doctorId);
       sessionStorage.setItem('selectedDoctor', JSON.stringify({
         id: doctorId,
         name: doctor?.name,
+        treatments: doctor?.treatments || [],
       }));
       sessionStorage.setItem('selectedDate', selectedDate.toISOString());
 
