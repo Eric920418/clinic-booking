@@ -21,8 +21,9 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
 
     // 並行查詢所有資料
     const [doctors, treatmentTypes, accounts] = await Promise.all([
-      // 1. 醫師列表（含診療項目關聯）
+      // 1. 醫師列表（含診療項目關聯，僅啟用中）
       prisma.doctor.findMany({
+        where: { isActive: true },
         select: {
           id: true,
           name: true,
@@ -41,15 +42,17 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
         orderBy: { name: 'asc' },
       }),
 
-      // 2. 診療項目列表
+      // 2. 診療項目列表（僅啟用中）
       prisma.treatmentType.findMany({
+        where: { isActive: true },
         select: { id: true, name: true, durationMinutes: true, isActive: true },
         orderBy: { sortOrder: 'asc' },
       }),
 
-      // 3. 管理員帳號列表（僅超級管理員可見）
+      // 3. 管理員帳號列表（僅超級管理員可見，僅啟用中）
       user.role === 'super_admin'
         ? prisma.adminUser.findMany({
+            where: { isActive: true },
             select: {
               id: true,
               email: true,
