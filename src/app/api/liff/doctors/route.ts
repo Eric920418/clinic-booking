@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { type ApiResponse } from '@/types';
-import { startOfDay } from 'date-fns';
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     // 如果指定日期，篩選當日有值班的醫師
     if (dateStr) {
-      const date = startOfDay(new Date(dateStr));
+      const date = new Date(dateStr);
       whereClause.schedules = {
         some: {
           date,

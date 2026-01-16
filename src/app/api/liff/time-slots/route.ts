@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { type ApiResponse } from '@/types';
-import { startOfDay } from 'date-fns';
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -22,7 +21,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       }, { status: 400 });
     }
 
-    const date = startOfDay(new Date(dateStr));
+    // 使用與 POST API 相同的日期處理方式
+    const date = new Date(dateStr);
 
     // 規則：顯示該醫師該日的所有時段
     // 規則：標示各時段剩餘可預約分鐘數
