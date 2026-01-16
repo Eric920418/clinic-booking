@@ -14,7 +14,7 @@ import {
   Info,
   X,
 } from 'lucide-react';
-import { useDoctors, useSchedules, type Doctor, type Schedule, type TimeSlot } from '@/lib/api';
+import { useSettings, useSchedules, type Doctor, type Schedule, type TimeSlot } from '@/lib/api';
 
 // 時段選項
 const TIME_SLOT_OPTIONS = [
@@ -64,8 +64,9 @@ export default function SchedulesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 使用 SWR hooks 取得資料
-  const { data: doctorsData } = useDoctors();
-  const doctors: Doctor[] = doctorsData || [];
+  // 使用 useSettings 來獲取所有醫師（包括停用的），而非 useDoctors（只返回啟用的）
+  const { data: settingsData } = useSettings();
+  const doctors: Doctor[] = settingsData?.doctors || [];
 
   // 計算日期範圍
   const dateRange = useMemo(() => {
@@ -916,18 +917,22 @@ export default function SchedulesPage() {
               {/* 選擇醫師 */}
               <div>
                 <label className="text-sm text-neutral-500 mb-2 block">選擇醫師</label>
-                <select
-                  value={addScheduleDoctorId}
-                  onChange={(e) => setAddScheduleDoctorId(e.target.value)}
-                  className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
-                >
-                  <option value="">請選擇醫師</option>
-                  {doctors.map((doctor) => (
-                    <option key={doctor.id} value={doctor.id}>
-                      {doctor.name}
-                    </option>
-                  ))}
-                </select>
+                {doctors.filter(d => d.isActive).length === 0 ? (
+                  <p className="text-sm text-red-500 py-2">目前沒有啟用的醫師，請先至系統設定啟用醫師</p>
+                ) : (
+                  <select
+                    value={addScheduleDoctorId}
+                    onChange={(e) => setAddScheduleDoctorId(e.target.value)}
+                    className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
+                  >
+                    <option value="">請選擇醫師</option>
+                    {doctors.filter(d => d.isActive).map((doctor) => (
+                      <option key={doctor.id} value={doctor.id}>
+                        {doctor.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* 已選日期 */}

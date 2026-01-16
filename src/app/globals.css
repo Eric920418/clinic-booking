@@ -17,18 +17,18 @@
   --color-neutral-900: #262626;
 
   /* ===== Primary 主色 (深青藍) ===== */
-  --color-primary-50: #DBF6FF;
-  --color-primary-100: #ACEDFF;
-  --color-primary-200: #55DFFF;
-  --color-primary-300: #00B8ED;
-  --color-primary-400: #0076A5;
-  --color-primary-500: #0076A5;
-  --color-primary-600: #006588;
-  --color-primary-700: #005372;
-  --color-primary-800: #00405B;
-  --color-primary-900: #00405B;
-  --color-primary-950: #002a3d;
-  --color-primary: #0076A5;
+  --color-primary-50: #E6F4FB;
+  --color-primary-100: #CCE9F7;
+  --color-primary-200: #99D3EF;
+  --color-primary-300: #66BDE7;
+  --color-primary-400: #33A7DF;
+  --color-primary-500: #008ADA;
+  --color-primary-600: #006FB0;
+  --color-primary-700: #005483;
+  --color-primary-800: #003A5A;
+  --color-primary-900: #001F30;
+  --color-primary-950: #001520;
+  --color-primary: #008ADA;
 
   /* ===== Accent 強調色 (金黃) ===== */
   --color-accent-50: #FFFAEC;
@@ -93,7 +93,7 @@
   --color-surface-muted: #F6F6F6;
   --color-border: #D1D1D1;
   --color-border-muted: #F6F6F6;
-  --color-info: #0076A5;
+  --color-info: #008ADA;
 
   /* ===== 字體 ===== */
   --font-sans: "Noto Sans TC", system-ui, sans-serif;
@@ -206,7 +206,7 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(0, 118, 165, 0.15);
+  box-shadow: 0 0 0 3px rgba(0, 138, 218, 0.15);
 }
 
 .input {
@@ -221,7 +221,7 @@ select:focus {
 .input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(0, 118, 165, 0.15);
+  box-shadow: 0 0 0 3px rgba(0, 138, 218, 0.15);
 }
 
 .input-error {
