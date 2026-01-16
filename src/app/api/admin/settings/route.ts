@@ -21,9 +21,23 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
 
     // 並行查詢所有資料
     const [doctors, treatmentTypes, accounts] = await Promise.all([
-      // 1. 醫師列表
+      // 1. 醫師列表（含診療項目關聯）
       prisma.doctor.findMany({
-        select: { id: true, name: true, isActive: true },
+        select: {
+          id: true,
+          name: true,
+          isActive: true,
+          doctorTreatments: {
+            select: {
+              treatmentType: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
         orderBy: { name: 'asc' },
       }),
 

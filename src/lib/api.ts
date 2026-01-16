@@ -28,10 +28,18 @@ const defaultConfig: SWRConfiguration = {
 
 // ==================== 類型定義 ====================
 
+export interface DoctorTreatment {
+  treatmentType: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface Doctor {
   id: string;
   name: string;
   isActive?: boolean;
+  doctorTreatments?: DoctorTreatment[];
 }
 
 export interface TreatmentType {

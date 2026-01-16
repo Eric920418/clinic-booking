@@ -60,7 +60,7 @@ export default function SettingsPage() {
     (data?.doctors || []).map(d => ({
       id: d.id,
       name: d.name,
-      treatments: [], // API 未返回關聯
+      treatments: (d.doctorTreatments || []).map(dt => dt.treatmentType?.name).filter(Boolean) as string[],
       minutesPerSlot: 30,
     })),
     [data?.doctors]
@@ -148,7 +148,10 @@ export default function SettingsPage() {
       const response = await fetch('/api/admin/doctors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: doctorName }),
+        body: JSON.stringify({
+          name: doctorName,
+          treatmentIds: selectedTreatments.length > 0 ? selectedTreatments : undefined,
+        }),
       });
 
       const result = await response.json();

@@ -503,30 +503,35 @@ export default function AppointmentsPage() {
                         <div className="text-sm text-neutral-600">{appointment.note}</div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleAttendance(appointment.id, 'present')}
-                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              appointment.attendance === 'present'
-                                ? 'bg-success border-success text-white'
-                                : 'border-neutral-300 text-neutral-400 hover:border-success hover:text-success'
-                            }`}
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAttendance(appointment.id, 'absent')}
-                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              appointment.attendance === 'absent'
-                                ? 'bg-error border-error text-white'
-                                : 'border-neutral-300 text-neutral-400 hover:border-error hover:text-error'
-                            }`}
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {/* 只有「已預約」狀態才能操作出席按鈕 */}
+                        {appointment.status === 'booked' ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleAttendance(appointment.id, 'present')}
+                              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                appointment.attendance === 'present'
+                                  ? 'bg-success border-success text-white'
+                                  : 'border-neutral-300 text-neutral-400 hover:border-success hover:text-success'
+                              }`}
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAttendance(appointment.id, 'absent')}
+                              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                appointment.attendance === 'absent'
+                                  ? 'bg-error border-error text-white'
+                                  : 'border-neutral-300 text-neutral-400 hover:border-error hover:text-error'
+                              }`}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-neutral-400">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-4">
                         <button

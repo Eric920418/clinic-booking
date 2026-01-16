@@ -97,13 +97,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 // 7. 若檢查失敗：回滾交易、返回錯誤訊息
 // =============================================
 const createAppointmentSchema = z.object({
-  lineUserId: z.string().min(1),
+  lineUserId: z.string().optional(), // 可選：有則發送 LINE 通知
   patientData: z.object({
     name: z.string().min(2).max(20),
     phone: z.string().regex(/^09\d{8}$/),
     nationalId: z.string(),
     birthDate: z.string(),
-  }).optional(),
+  }),
   doctorId: z.string().uuid(),
   timeSlotId: z.string().uuid(),
   treatmentTypeId: z.string().uuid(),
@@ -125,12 +125,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const { lineUserId, patientData, doctorId, timeSlotId, treatmentTypeId, appointmentDate } = parsed.data;
     const appointmentDateObj = startOfDay(new Date(appointmentDate));
 
-    // 規則：病患不可在黑名單中
-    // 對應規格：spec/features/病患建立預約.feature - 黑名單病患無法建立預約
+    // 規則：身分證字號必須符合台灣身分證格式
+    // 對應規格：spec/features/病患資料處理.feature
+    if (!validateTaiwanNationalId(patientData.nationalId)) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '請輸入有效的台灣身分證字號' },
+      }, { status: 400 });
+    }
+
+    // 用身分證字號查找病患（身分證字號為唯一識別）
     let patient = await prisma.patient.findUnique({
-      where: { lineUserId },
+      where: { nationalId: patientData.nationalId },
     });
 
+    // 規則：病患不可在黑名單中
+    // 對應規格：spec/features/病患建立預約.feature - 黑名單病患無法建立預約
     if (patient?.isBlacklisted) {
       return NextResponse.json({
         success: false,
@@ -138,33 +148,29 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       }, { status: 403 });
     }
 
-    // 如果是新病患，驗證並建立資料
-    if (!patient && patientData) {
-      // 規則：身分證字號必須符合台灣身分證格式
-      // 對應規格：spec/features/病患資料處理.feature
-      if (!validateTaiwanNationalId(patientData.nationalId)) {
-        return NextResponse.json({
-          success: false,
-          error: { code: 'E001', message: '請輸入有效的台灣身分證字號' },
-        }, { status: 400 });
-      }
-
+    // 如果是新病患，建立資料
+    if (!patient) {
       patient = await prisma.patient.create({
         data: {
-          lineUserId,
+          lineUserId: lineUserId || null,
           name: patientData.name,
           phone: patientData.phone,
           nationalId: patientData.nationalId,
           birthDate: new Date(patientData.birthDate),
         },
       });
-    }
-
-    if (!patient) {
-      return NextResponse.json({
-        success: false,
-        error: { code: 'E001', message: '請先填寫個人資料' },
-      }, { status: 400 });
+    } else {
+      // 回診病患：更新資料（如果有提供 lineUserId 則綁定）
+      patient = await prisma.patient.update({
+        where: { id: patient.id },
+        data: {
+          name: patientData.name,
+          phone: patientData.phone,
+          birthDate: new Date(patientData.birthDate),
+          // 如果之前沒有綁定 LINE，且這次有提供，則綁定
+          ...(lineUserId && !patient.lineUserId ? { lineUserId } : {}),
+        },
+      });
     }
 
     // 取得診療類型

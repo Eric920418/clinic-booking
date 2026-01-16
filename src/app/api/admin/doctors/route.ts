@@ -10,6 +10,7 @@ import { z } from 'zod'
 // 驗證 Schema
 const createDoctorSchema = z.object({
   name: z.string().min(2, '姓名至少 2 字元').max(20, '姓名不可超過 20 字元'),
+  treatmentIds: z.array(z.string().uuid()).optional(),
 })
 
 /**
@@ -46,13 +47,29 @@ export async function POST(
       }, { status: 400 })
     }
 
-    const { name } = validationResult.data
+    const { name, treatmentIds } = validationResult.data
 
-    // 建立醫師（預設為啟用狀態）
+    // 建立醫師（預設為啟用狀態），同時關聯診療項目
     const doctor = await prisma.doctor.create({
       data: {
         name,
         isActive: true,
+        doctorTreatments: treatmentIds && treatmentIds.length > 0
+          ? {
+              create: treatmentIds.map(treatmentTypeId => ({
+                treatmentTypeId,
+              })),
+            }
+          : undefined,
+      },
+      include: {
+        doctorTreatments: {
+          select: {
+            treatmentType: {
+              select: { id: true, name: true },
+            },
+          },
+        },
       },
     })
 
@@ -65,6 +82,7 @@ export async function POST(
         targetId: doctor.id,
         details: {
           doctorName: name,
+          treatmentIds: treatmentIds || [],
         },
       },
     })
