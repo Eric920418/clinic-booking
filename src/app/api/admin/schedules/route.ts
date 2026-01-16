@@ -71,23 +71,6 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Rule: 同一醫師在同一日期只能有一筆班表
-    const existingSchedule = await prisma.schedule.findUnique({
-      where: {
-        doctorId_date: {
-          doctorId,
-          date: scheduleDate,
-        },
-      },
-    })
-
-    if (existingSchedule) {
-      return NextResponse.json({
-        success: false,
-        error: { code: 'E001', message: '該醫師在此日期已有班表' },
-      }, { status: 400 })
-    }
-
     // 取得時段配置
     const slotConfig = TIME_SLOT_CONFIGS[timeSlotType]
 
@@ -115,26 +98,65 @@ export async function POST(
       })
     }
 
-    // 使用事務建立班表和時段
-    const schedule = await prisma.$transaction(async (tx) => {
-      // 建立班表
-      const newSchedule = await tx.schedule.create({
-        data: {
+    // 檢查是否已有班表
+    const existingSchedule = await prisma.schedule.findUnique({
+      where: {
+        doctorId_date: {
           doctorId,
           date: scheduleDate,
-          isAvailable: true,
         },
-      })
+      },
+      include: {
+        timeSlots: true,
+      },
+    })
 
-      // 建立時段
-      await tx.timeSlot.createMany({
-        data: timeSlotsData.map((slot) => ({
-          scheduleId: newSchedule.id,
-          ...slot,
-        })),
-      })
+    // 使用事務建立或更新班表和時段
+    const schedule = await prisma.$transaction(async (tx) => {
+      if (existingSchedule) {
+        // 班表已存在，檢查時段是否重複
+        const existingStartTimes = existingSchedule.timeSlots.map(
+          (slot) => slot.startTime.getHours() * 60 + slot.startTime.getMinutes()
+        )
+        const newStartTimes = timeSlotsData.map(
+          (slot) => slot.startTime.getHours() * 60 + slot.startTime.getMinutes()
+        )
 
-      return newSchedule
+        // 檢查是否有重複的時段
+        const hasOverlap = newStartTimes.some((t) => existingStartTimes.includes(t))
+        if (hasOverlap) {
+          throw new Error('該時段已存在')
+        }
+
+        // 新增時段到現有班表
+        await tx.timeSlot.createMany({
+          data: timeSlotsData.map((slot) => ({
+            scheduleId: existingSchedule.id,
+            ...slot,
+          })),
+        })
+
+        return existingSchedule
+      } else {
+        // 建立新班表
+        const newSchedule = await tx.schedule.create({
+          data: {
+            doctorId,
+            date: scheduleDate,
+            isAvailable: true,
+          },
+        })
+
+        // 建立時段
+        await tx.timeSlot.createMany({
+          data: timeSlotsData.map((slot) => ({
+            scheduleId: newSchedule.id,
+            ...slot,
+          })),
+        })
+
+        return newSchedule
+      }
     })
 
     // 記錄操作日誌
@@ -163,6 +185,15 @@ export async function POST(
 
   } catch (error) {
     console.error('[POST /api/admin/schedules]', error)
+
+    // 處理自定義錯誤
+    if (error instanceof Error && error.message === '該時段已存在') {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'E001', message: '該時段已存在' },
+      }, { status: 400 })
+    }
+
     return NextResponse.json({
       success: false,
       error: { code: 'E001', message: '建立班表失敗' },

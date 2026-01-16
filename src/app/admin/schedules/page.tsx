@@ -361,43 +361,16 @@ export default function SchedulesPage() {
     }
   };
 
-  // 判斷時段屬於哪個班別
-  const getTimeSlotType = (startTime: string): 'morning' | 'afternoon' | 'evening' | null => {
-    const hour = parseInt(startTime.split(':')[0], 10);
-    if (hour >= 9 && hour < 13) return 'morning';     // 09:00-12:30
-    if (hour >= 14 && hour < 18) return 'afternoon';  // 14:00-17:30
-    if (hour >= 18 && hour <= 21) return 'evening';   // 18:00-21:00
-    return null;
-  };
-
-  // 過濾班表（根據選中的時段，支援多選）
-  const filterSchedulesByTimeSlot = (scheduleList: Schedule[]) => {
-    // 如果沒有選擇任何時段，不顯示任何班表
-    if (selectedTimeSlots.length === 0) return [];
-    return scheduleList.filter((schedule) => {
-      // 如果班表沒有時段，不顯示
-      if (!schedule.timeSlots || schedule.timeSlots.length === 0) return false;
-      // 檢查是否有任何時段符合選中的班別（任一符合即可）
-      return schedule.timeSlots.some((slot) => {
-        const slotType = getTimeSlotType(slot.startTime);
-        return slotType && selectedTimeSlots.includes(slotType);
-      });
-    });
-  };
-
-  // 取得特定日期的班表資訊（根據選中的醫師和時段過濾）
+  // 取得特定日期的班表資訊（只根據選中的醫師過濾，時段選擇只用於新增）
   const getScheduleForDate = (day: number) => {
     const westernYear = currentYear + 1911;
     const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     let daySchedules = schedules.filter((s) => s.date === dateStr);
 
-    // 根據選中的醫師過濾
+    // 根據選中的醫師過濾（如果有選擇的話）
     if (selectedDoctorIds.length > 0) {
       daySchedules = daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
     }
-
-    // 根據選中的時段過濾
-    daySchedules = filterSchedulesByTimeSlot(daySchedules);
 
     return daySchedules;
   };
@@ -486,8 +459,6 @@ export default function SchedulesPage() {
     if (selectedDoctorIds.length > 0) {
       daySchedules = daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
     }
-    // 根據選中的時段過濾
-    daySchedules = filterSchedulesByTimeSlot(daySchedules);
 
     // 按醫師分組
     const doctorScheduleMap = new Map<string, { doctorId: string; doctorName: string; slots: { id: string; label: string }[] }>();
@@ -898,8 +869,6 @@ export default function SchedulesPage() {
                       if (selectedDoctorIds.length > 0) {
                         daySchedules = daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
                       }
-                      // 根據選中的時段過濾
-                      daySchedules = filterSchedulesByTimeSlot(daySchedules);
 
                       return (
                         <div
