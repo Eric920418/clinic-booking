@@ -19,7 +19,7 @@ import { type ApiResponse } from '@/types'
 // Rule: 同一醫師在同一日期只能有一筆班表
 // =============================================
 const createScheduleSchema = z.object({
-  doctorId: z.string().uuid('醫師 ID 格式無效'),
+  doctorId: z.string().min(1, '請選擇醫師'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必須為 YYYY-MM-DD'),
 })
 
@@ -155,15 +155,41 @@ export async function GET(
     const schedules = await prisma.schedule.findMany({
       where,
       include: {
-        doctor: true,
-        timeSlots: true,
+        doctor: {
+          select: { id: true, name: true },
+        },
+        timeSlots: {
+          select: {
+            id: true,
+            startTime: true,
+            endTime: true,
+            totalMinutes: true,
+            remainingMinutes: true,
+          },
+        },
       },
       orderBy: { date: 'asc' },
     })
 
+    // 轉換格式，將 doctor.name 提取為 doctorName
+    const formattedSchedules = schedules.map(schedule => ({
+      id: schedule.id,
+      doctorId: schedule.doctorId,
+      doctorName: schedule.doctor.name,
+      date: schedule.date.toISOString().split('T')[0],
+      isAvailable: schedule.isAvailable,
+      timeSlots: schedule.timeSlots.map(slot => ({
+        id: slot.id,
+        startTime: slot.startTime.toISOString().substring(11, 16),
+        endTime: slot.endTime.toISOString().substring(11, 16),
+        totalMinutes: slot.totalMinutes,
+        remainingMinutes: slot.remainingMinutes,
+      })),
+    }))
+
     return NextResponse.json({
       success: true,
-      data: schedules,
+      data: formattedSchedules,
     })
 
   } catch (error) {

@@ -338,11 +338,16 @@ export default function SchedulesPage() {
     }
   };
 
-  // 取得特定日期的班表資訊
+  // 取得特定日期的班表資訊（根據選中的醫師過濾）
   const getScheduleForDate = (day: number) => {
     const westernYear = currentYear + 1911;
     const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return schedules.filter((s) => s.date === dateStr);
+    const daySchedules = schedules.filter((s) => s.date === dateStr);
+    // 如果有選擇特定醫師，則過濾
+    if (selectedDoctorIds.length > 0) {
+      return daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
+    }
+    return daySchedules;
   };
 
   const calendarDays = generateCalendarDays();
@@ -384,7 +389,11 @@ export default function SchedulesPage() {
   // 取得當日班表（日檢視用）
   const getDaySchedules = () => {
     const dateStr = currentDate.toISOString().split('T')[0];
-    const daySchedules = schedules.filter((s) => s.date === dateStr);
+    let daySchedules = schedules.filter((s) => s.date === dateStr);
+    // 根據選中的醫師過濾
+    if (selectedDoctorIds.length > 0) {
+      daySchedules = daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
+    }
 
     // 按醫師分組
     const doctorScheduleMap = new Map<string, { doctorId: string; doctorName: string; slots: { id: string; label: string }[] }>();
@@ -784,7 +793,11 @@ export default function SchedulesPage() {
                     {weekDays.map((date, index) => {
                       const day = date.getDate();
                       const isSelected = selectedDates.includes(day);
-                      const daySchedules = schedules.filter((s) => s.date === date.toISOString().split('T')[0]);
+                      let daySchedules = schedules.filter((s) => s.date === date.toISOString().split('T')[0]);
+                      // 根據選中的醫師過濾
+                      if (selectedDoctorIds.length > 0) {
+                        daySchedules = daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
+                      }
 
                       return (
                         <div
