@@ -30,60 +30,60 @@
   --color-primary-950: #001520;
   --color-primary: #008ADA;
 
-  /* ===== Accent 強調色 (金黃) ===== */
-  --color-accent-50: #FFFAEC;
-  --color-accent-100: #FEF3C5;
-  --color-accent-200: #FBE383;
-  --color-accent-300: #F8CA02;
-  --color-accent-400: #F8CA02;
+  /* ===== Accent 強調色 (金黃 #F8CA02) ===== */
+  --color-accent-50: #FFFDF5;
+  --color-accent-100: #FEF9E6;
+  --color-accent-200: #FDF2C4;
+  --color-accent-300: #FBE898;
+  --color-accent-400: #FADC5C;
   --color-accent-500: #F8CA02;
-  --color-accent-600: #F8BB00;
-  --color-accent-700: #F59A00;
-  --color-accent-800: #B85100;
-  --color-accent-900: #7C3404;
-  --color-accent-950: #471901;
+  --color-accent-600: #DFB502;
+  --color-accent-700: #B89202;
+  --color-accent-800: #8C6F02;
+  --color-accent-900: #604C02;
+  --color-accent-950: #3D3001;
   --color-accent: #F8CA02;
 
-  /* ===== Success 成功色 (Green 綠) ===== */
-  --color-success-50: #D0FFE4;
-  --color-success-100: #D0FFE4;
-  --color-success-200: #A0FFCB;
-  --color-success-300: #2EFEA1;
-  --color-success-400: #00F16D;
-  --color-success-500: #00C83F;
-  --color-success-600: #00B532;
-  --color-success-700: #008E2D;
-  --color-success-800: #00702B;
-  --color-success-900: #005B26;
-  --color-success-950: #003311;
+  /* ===== Success 成功色 (綠 #00B532) ===== */
+  --color-success-50: #EDFFF3;
+  --color-success-100: #D5FFE4;
+  --color-success-200: #ADFFC9;
+  --color-success-300: #70FFA3;
+  --color-success-400: #2DF575;
+  --color-success-500: #00B532;
+  --color-success-600: #009A2B;
+  --color-success-700: #007D24;
+  --color-success-800: #00621D;
+  --color-success-900: #004816;
+  --color-success-950: #002D0E;
   --color-success: #00B532;
 
-  /* ===== Warning 警告色 (Orange 橙) ===== */
-  --color-warning-50: #FFF7EC;
-  --color-warning-100: #FFEBD4;
-  --color-warning-200: #FFD4A6;
-  --color-warning-300: #FFB36B;
-  --color-warning-400: #FF8723;
+  /* ===== Warning 警告色 (橙 #FF6400) ===== */
+  --color-warning-50: #FFF7ED;
+  --color-warning-100: #FFEDD5;
+  --color-warning-200: #FFD8AA;
+  --color-warning-300: #FFBB73;
+  --color-warning-400: #FF9538;
   --color-warning-500: #FF6400;
-  --color-warning-600: #F94500;
-  --color-warning-700: #D53100;
-  --color-warning-800: #A52700;
-  --color-warning-900: #852306;
-  --color-warning-950: #520004;
+  --color-warning-600: #E65500;
+  --color-warning-700: #BF4500;
+  --color-warning-800: #993800;
+  --color-warning-900: #732A00;
+  --color-warning-950: #4D1C00;
   --color-warning: #FF6400;
 
-  /* ===== Error 錯誤色 (深紅) ===== */
+  /* ===== Error 錯誤色 (紅 #D60000) ===== */
   --color-error-50: #FFF1F1;
-  --color-error-100: #FFC3C6;
-  --color-error-200: #FF999D;
-  --color-error-300: #FF5964;
-  --color-error-400: #FF012B;
+  --color-error-100: #FFE0E0;
+  --color-error-200: #FFC7C7;
+  --color-error-300: #FF9999;
+  --color-error-400: #FF5555;
   --color-error-500: #D60000;
-  --color-error-600: #D60000;
-  --color-error-700: #B30000;
-  --color-error-800: #93000F;
-  --color-error-900: #520004;
-  --color-error-950: #3a0003;
+  --color-error-600: #B80000;
+  --color-error-700: #9A0000;
+  --color-error-800: #7D0000;
+  --color-error-900: #5C0000;
+  --color-error-950: #3A0000;
   --color-error: #D60000;
 
   /* ===== 語義色 (便捷別名) ===== */

@@ -29,6 +29,9 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
           name: true,
           isActive: true,
           doctorTreatments: {
+            where: {
+              treatmentType: { isActive: true },
+            },
             select: {
               treatmentType: {
                 select: {

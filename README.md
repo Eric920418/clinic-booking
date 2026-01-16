@@ -44,13 +44,13 @@
 
 色系來源：[Figma Design](https://www.figma.com/design/Qlf3jgd3yK4GGbLIWYSBwi/Untitled?node-id=1-68)
 
-| 色系 | 用途 | 主色值 |
-|------|------|--------|
-| Primary | 主要操作、連結、強調 | `#0076A5` (深青藍) |
+| 色系 | 用途 | 主色 (500) |
+|------|------|------------|
+| Primary | 主要操作、連結、強調 | `#008ADA` (深青藍) |
 | Accent | 次要強調、標籤 | `#F8CA02` (金黃) |
 | Success | 成功狀態 | `#00B532` (綠) |
 | Warning | 警告狀態 | `#FF6400` (橙) |
-| Error | 錯誤狀態 | `#D60000` (深紅) |
+| Error | 錯誤狀態 | `#D60000` (紅) |
 | Neutral | 文字、邊框、背景 | `#262626` ~ `#FFFFFF` |
 
 使用方式（Tailwind CSS v4）：
