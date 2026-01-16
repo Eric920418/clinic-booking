@@ -344,21 +344,65 @@ export default function SchedulesPage() {
     }
   };
 
-  // 取得特定日期的班表資訊（根據選中的醫師過濾）
+  // 判斷時段屬於哪個班別
+  const getTimeSlotType = (startTime: string): 'morning' | 'afternoon' | 'evening' | null => {
+    const hour = parseInt(startTime.split(':')[0], 10);
+    if (hour >= 9 && hour < 13) return 'morning';     // 09:00-12:30
+    if (hour >= 14 && hour < 18) return 'afternoon';  // 14:00-17:30
+    if (hour >= 18 && hour <= 21) return 'evening';   // 18:00-21:00
+    return null;
+  };
+
+  // 過濾班表（根據選中的時段）
+  const filterSchedulesByTimeSlot = (scheduleList: Schedule[]) => {
+    return scheduleList.filter((schedule) => {
+      // 如果班表沒有時段，不顯示
+      if (!schedule.timeSlots || schedule.timeSlots.length === 0) return false;
+      // 檢查是否有任何時段符合選中的班別
+      return schedule.timeSlots.some((slot) => {
+        const slotType = getTimeSlotType(slot.startTime);
+        return slotType === selectedTimeSlot;
+      });
+    });
+  };
+
+  // 取得特定日期的班表資訊（根據選中的醫師和時段過濾）
   const getScheduleForDate = (day: number) => {
     const westernYear = currentYear + 1911;
     const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const daySchedules = schedules.filter((s) => s.date === dateStr);
-    // 如果有選擇特定醫師，則過濾
+    let daySchedules = schedules.filter((s) => s.date === dateStr);
+
+    // 根據選中的醫師過濾
     if (selectedDoctorIds.length > 0) {
-      return daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
+      daySchedules = daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
     }
+
+    // 根據選中的時段過濾
+    daySchedules = filterSchedulesByTimeSlot(daySchedules);
+
     return daySchedules;
   };
 
   const calendarDays = generateCalendarDays();
   const weekDays = generateWeekDays();
   const selectedTimeSlotLabel = TIME_SLOT_OPTIONS.find((t) => t.id === selectedTimeSlot)?.label;
+
+  // 計算醫師選擇的顯示文字
+  const getSelectedDoctorsLabel = () => {
+    if (selectedDoctorIds.length === 0) {
+      return '請選擇醫師';
+    }
+    if (selectedDoctorIds.length === doctors.length) {
+      return '全部醫師';
+    }
+    const selectedDoctorNames = doctors
+      .filter((d) => selectedDoctorIds.includes(d.id))
+      .map((d) => d.name);
+    if (selectedDoctorNames.length <= 2) {
+      return selectedDoctorNames.join('、');
+    }
+    return `${selectedDoctorNames.slice(0, 2).join('、')} 等 ${selectedDoctorNames.length} 位`;
+  };
 
   // 導航處理
   const handlePrev = () => {
@@ -400,6 +444,8 @@ export default function SchedulesPage() {
     if (selectedDoctorIds.length > 0) {
       daySchedules = daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
     }
+    // 根據選中的時段過濾
+    daySchedules = filterSchedulesByTimeSlot(daySchedules);
 
     // 按醫師分組
     const doctorScheduleMap = new Map<string, { doctorId: string; doctorName: string; slots: { id: string; label: string }[] }>();
@@ -530,10 +576,8 @@ export default function SchedulesPage() {
                   onClick={() => setShowDoctorDropdown(!showDoctorDropdown)}
                   className="w-full h-10 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                 >
-                  <span className="text-neutral-700">
-                    {selectedDoctorIds.length === 0 || selectedDoctorIds.length === doctors.length
-                      ? '全部醫師'
-                      : `已選 ${selectedDoctorIds.length} 位`}
+                  <span className="text-neutral-700 truncate">
+                    {getSelectedDoctorsLabel()}
                   </span>
                   <ChevronDown className="w-5 h-5 text-neutral-400" />
                 </button>
@@ -643,12 +687,8 @@ export default function SchedulesPage() {
                     }}
                     className="w-full h-10 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:border-primary"
                   >
-                    <span className="text-neutral-700">
-                      {selectedDoctorIds.length === 0
-                        ? '全部醫師'
-                        : selectedDoctorIds.length === doctors.length
-                          ? '全部醫師'
-                          : `已選 ${selectedDoctorIds.length} 位`}
+                    <span className="text-neutral-700 truncate">
+                      {getSelectedDoctorsLabel()}
                     </span>
                     <ChevronDown className="w-5 h-5 text-neutral-400" />
                   </button>
@@ -797,6 +837,8 @@ export default function SchedulesPage() {
                       if (selectedDoctorIds.length > 0) {
                         daySchedules = daySchedules.filter((s) => selectedDoctorIds.includes(s.doctorId));
                       }
+                      // 根據選中的時段過濾
+                      daySchedules = filterSchedulesByTimeSlot(daySchedules);
 
                       return (
                         <div
@@ -929,7 +971,7 @@ export default function SchedulesPage() {
             <div className="space-y-4">
               {/* 選擇醫師 */}
               <div>
-                <label className="text-sm text-neutral-500 mb-2 block">選擇醫師</label>
+                <label className="text-sm text-neutral-500 mb-2 block">步驟一：選擇醫師</label>
                 {doctors.filter(d => d.isActive).length === 0 ? (
                   <p className="text-sm text-red-500 py-2">目前沒有啟用的醫師，請先至系統設定啟用醫師</p>
                 ) : (
@@ -950,7 +992,7 @@ export default function SchedulesPage() {
 
               {/* 選擇時段 */}
               <div>
-                <label className="text-sm text-neutral-500 mb-2 block">選擇時段</label>
+                <label className="text-sm text-neutral-500 mb-2 block">步驟二：選擇時段</label>
                 <select
                   value={addScheduleTimeSlot}
                   onChange={(e) => setAddScheduleTimeSlot(e.target.value)}

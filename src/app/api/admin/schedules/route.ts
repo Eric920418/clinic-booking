@@ -231,8 +231,9 @@ export async function GET(
       isAvailable: schedule.isAvailable,
       timeSlots: schedule.timeSlots.map(slot => ({
         id: slot.id,
-        startTime: slot.startTime.toISOString().substring(11, 16),
-        endTime: slot.endTime.toISOString().substring(11, 16),
+        // 使用 getHours/getMinutes 以避免 toISOString 的 UTC 轉換問題
+        startTime: `${String(slot.startTime.getHours()).padStart(2, '0')}:${String(slot.startTime.getMinutes()).padStart(2, '0')}`,
+        endTime: `${String(slot.endTime.getHours()).padStart(2, '0')}:${String(slot.endTime.getMinutes()).padStart(2, '0')}`,
         totalMinutes: slot.totalMinutes,
         remainingMinutes: slot.remainingMinutes,
       })),
