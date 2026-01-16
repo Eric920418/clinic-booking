@@ -14,6 +14,16 @@ import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { type ApiResponse } from '@/types'
 
+// 時段類型對應的時間範圍
+const TIME_SLOT_CONFIGS = {
+  morning: { startHour: 9, startMinute: 0, endHour: 12, endMinute: 30 },    // 早班：09:00-12:30
+  afternoon: { startHour: 14, startMinute: 0, endHour: 17, endMinute: 30 }, // 午班：14:00-17:30
+  evening: { startHour: 18, startMinute: 0, endHour: 21, endMinute: 0 },    // 晚班：18:00-21:00
+} as const;
+
+// 每個時段的分鐘數（預設 30 分鐘一個時段）
+const SLOT_DURATION_MINUTES = 30;
+
 // =============================================
 // POST: 建立班表
 // Rule: 同一醫師在同一日期只能有一筆班表
@@ -21,6 +31,7 @@ import { type ApiResponse } from '@/types'
 const createScheduleSchema = z.object({
   doctorId: z.string().min(1, '請選擇醫師'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必須為 YYYY-MM-DD'),
+  timeSlotType: z.enum(['morning', 'afternoon', 'evening']).default('morning'),
 })
 
 export async function POST(
@@ -45,7 +56,7 @@ export async function POST(
       }, { status: 400 })
     }
 
-    const { doctorId, date } = parsed.data
+    const { doctorId, date, timeSlotType } = parsed.data
     const scheduleDate = new Date(date)
 
     // 檢查醫師是否存在
@@ -77,13 +88,53 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // 建立班表
-    const schedule = await prisma.schedule.create({
-      data: {
-        doctorId,
-        date: scheduleDate,
-        isAvailable: true,
-      },
+    // 取得時段配置
+    const slotConfig = TIME_SLOT_CONFIGS[timeSlotType]
+
+    // 計算時段數量
+    const startMinutes = slotConfig.startHour * 60 + slotConfig.startMinute
+    const endMinutes = slotConfig.endHour * 60 + slotConfig.endMinute
+    const totalDuration = endMinutes - startMinutes
+    const slotCount = Math.floor(totalDuration / SLOT_DURATION_MINUTES)
+
+    // 產生時段資料
+    const timeSlotsData: { startTime: Date; endTime: Date; totalMinutes: number; remainingMinutes: number }[] = []
+    for (let i = 0; i < slotCount; i++) {
+      const slotStartMinutes = startMinutes + i * SLOT_DURATION_MINUTES
+      const slotEndMinutes = slotStartMinutes + SLOT_DURATION_MINUTES
+
+      // 使用固定日期 1970-01-01 來存儲時間（PostgreSQL Time 類型）
+      const startTime = new Date(1970, 0, 1, Math.floor(slotStartMinutes / 60), slotStartMinutes % 60)
+      const endTime = new Date(1970, 0, 1, Math.floor(slotEndMinutes / 60), slotEndMinutes % 60)
+
+      timeSlotsData.push({
+        startTime,
+        endTime,
+        totalMinutes: SLOT_DURATION_MINUTES,
+        remainingMinutes: SLOT_DURATION_MINUTES,
+      })
+    }
+
+    // 使用事務建立班表和時段
+    const schedule = await prisma.$transaction(async (tx) => {
+      // 建立班表
+      const newSchedule = await tx.schedule.create({
+        data: {
+          doctorId,
+          date: scheduleDate,
+          isAvailable: true,
+        },
+      })
+
+      // 建立時段
+      await tx.timeSlot.createMany({
+        data: timeSlotsData.map((slot) => ({
+          scheduleId: newSchedule.id,
+          ...slot,
+        })),
+      })
+
+      return newSchedule
     })
 
     // 記錄操作日誌

@@ -60,6 +60,7 @@ export default function SchedulesPage() {
   // Modal 狀態
   const [showAddModal, setShowAddModal] = useState(false);
   const [addScheduleDoctorId, setAddScheduleDoctorId] = useState('');
+  const [addScheduleTimeSlot, setAddScheduleTimeSlot] = useState('morning');
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -278,7 +279,11 @@ export default function SchedulesPage() {
         const response = await fetch('/api/admin/schedules', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ doctorId: addScheduleDoctorId, date: dateStr }),
+          body: JSON.stringify({
+            doctorId: addScheduleDoctorId,
+            date: dateStr,
+            timeSlotType: addScheduleTimeSlot,
+          }),
         });
         const result = await response.json();
         if (!result.success) {
@@ -290,6 +295,7 @@ export default function SchedulesPage() {
       setShowAddModal(false);
       setSelectedDates([]);
       setAddScheduleDoctorId('');
+      setAddScheduleTimeSlot('morning');
     } catch (err) {
       console.error('新增班表失敗:', err);
       setLocalError('新增班表失敗');
@@ -912,6 +918,7 @@ export default function SchedulesPage() {
                 onClick={() => {
                   setShowAddModal(false);
                   setAddScheduleDoctorId('');
+                  setAddScheduleTimeSlot('morning');
                 }}
                 className="p-1 hover:bg-neutral-100 rounded-lg"
               >
@@ -939,6 +946,22 @@ export default function SchedulesPage() {
                     ))}
                   </select>
                 )}
+              </div>
+
+              {/* 選擇時段 */}
+              <div>
+                <label className="text-sm text-neutral-500 mb-2 block">選擇時段</label>
+                <select
+                  value={addScheduleTimeSlot}
+                  onChange={(e) => setAddScheduleTimeSlot(e.target.value)}
+                  className="w-full h-11 px-3 bg-[#F5F5F5] border border-[#888888] rounded-lg text-sm focus:outline-none focus:border-primary"
+                >
+                  {TIME_SLOT_OPTIONS.map((slot) => (
+                    <option key={slot.id} value={slot.id}>
+                      {slot.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* 已選日期 */}
@@ -969,6 +992,7 @@ export default function SchedulesPage() {
                 onClick={() => {
                   setShowAddModal(false);
                   setAddScheduleDoctorId('');
+                  setAddScheduleTimeSlot('morning');
                 }}
                 className="flex-1 h-10 bg-white hover:bg-neutral-50 text-neutral-700 font-medium text-sm rounded-lg border border-neutral-300"
               >
