@@ -9,6 +9,7 @@ import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { type ApiResponse } from '@/types';
 import { startOfDay, endOfDay, format, addHours } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -23,9 +24,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const { searchParams } = new URL(request.url);
     const requestedDoctorId = searchParams.get('doctorId');
 
-    const today = new Date();
-    const todayStart = startOfDay(today);
-    const todayEnd = endOfDay(today);
+    // 使用台灣時區計算今日日期
+    const taiwanTz = 'Asia/Taipei';
+    const nowInTaiwan = toZonedTime(new Date(), taiwanTz);
+    const todayStart = startOfDay(nowInTaiwan);
+    const todayEnd = endOfDay(nowInTaiwan);
 
     // 先查詢醫師列表（需要用來決定預設醫師）
     const doctors = await prisma.doctor.findMany({
