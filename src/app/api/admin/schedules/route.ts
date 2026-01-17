@@ -98,21 +98,21 @@ export async function POST(
       })
     }
 
-    // 檢查是否已有班表
-    const existingSchedule = await prisma.schedule.findUnique({
-      where: {
-        doctorId_date: {
-          doctorId,
-          date: scheduleDate,
-        },
-      },
-      include: {
-        timeSlots: true,
-      },
-    })
-
-    // 使用事務建立或更新班表和時段
+    // 使用事務建立或更新班表和時段（將檢查移入事務內以避免 race condition）
     const schedule = await prisma.$transaction(async (tx) => {
+      // 在事務內檢查是否已有班表
+      const existingSchedule = await tx.schedule.findUnique({
+        where: {
+          doctorId_date: {
+            doctorId,
+            date: scheduleDate,
+          },
+        },
+        include: {
+          timeSlots: true,
+        },
+      })
+
       if (existingSchedule) {
         // 班表已存在，檢查時段是否重複
         const existingStartTimes = existingSchedule.timeSlots.map(
