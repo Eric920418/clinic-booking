@@ -81,6 +81,9 @@ export default function ConfirmBookingPage() {
       const lineUserId = localStorage.getItem('lineUserId') || localStorage.getItem('mockLineUserId') || undefined;
 
       // 呼叫真實 API 建立預約
+      // 清理電話號碼格式（移除橫線）以符合 API 驗證規則
+      const cleanPhone = bookingData.profile.phone.replace(/\D/g, '');
+
       const response = await fetch('/api/liff/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +91,7 @@ export default function ConfirmBookingPage() {
           lineUserId,
           patientData: {
             name: bookingData.profile.name,
-            phone: bookingData.profile.phone,
+            phone: cleanPhone,
             nationalId: bookingData.profile.idNumber,
             birthDate: bookingData.profile.birthDate,
           },
