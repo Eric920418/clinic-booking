@@ -148,6 +148,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       }, { status: 403 });
     }
 
+    // 將民國年格式（YYYMMDD）轉換為西元年 Date
+    const parseBirthDate = (rocDate: string): Date => {
+      const cleaned = rocDate.replace(/\D/g, '');
+      const rocYear = parseInt(cleaned.substring(0, 3), 10);
+      const month = parseInt(cleaned.substring(3, 5), 10);
+      const day = parseInt(cleaned.substring(5, 7), 10);
+      const westernYear = rocYear + 1911;
+      return new Date(westernYear, month - 1, day);
+    };
+
+    const birthDateObj = parseBirthDate(patientData.birthDate);
+
     // 如果是新病患，建立資料
     if (!patient) {
       patient = await prisma.patient.create({
@@ -156,7 +168,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           name: patientData.name,
           phone: patientData.phone,
           nationalId: patientData.nationalId,
-          birthDate: new Date(patientData.birthDate),
+          birthDate: birthDateObj,
         },
       });
     } else {
@@ -166,7 +178,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         data: {
           name: patientData.name,
           phone: patientData.phone,
-          birthDate: new Date(patientData.birthDate),
+          birthDate: birthDateObj,
           // 如果之前沒有綁定 LINE，且這次有提供，則綁定
           ...(lineUserId && !patient.lineUserId ? { lineUserId } : {}),
         },
