@@ -211,9 +211,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           remaining_minutes: number;
           schedule_id: string;
         }>>`
-          SELECT id, remaining_minutes, schedule_id 
-          FROM time_slots 
-          WHERE id = ${timeSlotId}::uuid 
+          SELECT id, remaining_minutes, schedule_id
+          FROM time_slots
+          WHERE id = ${timeSlotId}
           FOR UPDATE
         `;
 

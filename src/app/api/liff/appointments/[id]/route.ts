@@ -192,9 +192,9 @@ export async function PUT(
           id: string;
           remaining_minutes: number;
         }>>`
-          SELECT id, remaining_minutes 
-          FROM time_slots 
-          WHERE id = ${newTimeSlotId}::uuid 
+          SELECT id, remaining_minutes
+          FROM time_slots
+          WHERE id = ${newTimeSlotId}
           FOR UPDATE
         `;
 
