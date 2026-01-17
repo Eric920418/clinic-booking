@@ -99,15 +99,15 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 const createAppointmentSchema = z.object({
   lineUserId: z.string().optional(), // 可選：有則發送 LINE 通知
   patientData: z.object({
-    name: z.string().min(2).max(20),
-    phone: z.string().regex(/^09\d{8}$/),
-    nationalId: z.string(),
-    birthDate: z.string(),
+    name: z.string().min(2, '姓名至少需要 2 個字').max(20, '姓名最多 20 個字'),
+    phone: z.string().regex(/^09\d{8}$/, '請輸入正確的手機號碼格式（09 開頭，共 10 碼）'),
+    nationalId: z.string().min(1, '請輸入身分證字號'),
+    birthDate: z.string().min(1, '請輸入出生日期'),
   }),
-  doctorId: z.string().uuid(),
-  timeSlotId: z.string().uuid(),
-  treatmentTypeId: z.string().uuid(),
-  appointmentDate: z.string(),
+  doctorId: z.string().uuid('醫師 ID 格式不正確'),
+  timeSlotId: z.string().uuid('時段 ID 格式不正確'),
+  treatmentTypeId: z.string().uuid('診療項目 ID 格式不正確'),
+  appointmentDate: z.string().min(1, '請選擇預約日期'),
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
