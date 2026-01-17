@@ -80,26 +80,6 @@ export default function ConfirmBookingPage() {
       // 取得 LINE User ID（可選）
       const lineUserId = localStorage.getItem('lineUserId') || localStorage.getItem('mockLineUserId') || undefined;
 
-      // 驗證 UUID 格式
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const invalidFields: string[] = [];
-
-      if (!uuidRegex.test(bookingData.doctor.id)) {
-        invalidFields.push(`醫師 ID: ${bookingData.doctor.id}`);
-      }
-      if (!uuidRegex.test(bookingData.timeSlot.id)) {
-        invalidFields.push(`時段 ID: ${bookingData.timeSlot.id}`);
-      }
-      if (!uuidRegex.test(bookingData.treatment.id)) {
-        invalidFields.push(`診療項目 ID: ${bookingData.treatment.id}`);
-      }
-
-      if (invalidFields.length > 0) {
-        alert(`資料格式錯誤：\n${invalidFields.join('\n')}\n\n請重新選擇預約資料`);
-        setIsLoading(false);
-        return;
-      }
-
       // 呼叫真實 API 建立預約
       // 清理電話號碼格式（移除橫線）以符合 API 驗證規則
       const cleanPhone = bookingData.profile.phone.replace(/\D/g, '');

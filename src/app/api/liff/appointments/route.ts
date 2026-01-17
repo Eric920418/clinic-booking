@@ -104,9 +104,9 @@ const createAppointmentSchema = z.object({
     nationalId: z.string().min(1, '請輸入身分證字號'),
     birthDate: z.string().min(1, '請輸入出生日期'),
   }),
-  doctorId: z.string().uuid('醫師 ID 格式不正確'),
-  timeSlotId: z.string().uuid('時段 ID 格式不正確'),
-  treatmentTypeId: z.string().uuid('診療項目 ID 格式不正確'),
+  doctorId: z.string().min(1, '請選擇醫師'),
+  timeSlotId: z.string().min(1, '請選擇時段'),
+  treatmentTypeId: z.string().min(1, '請選擇診療項目'),
   appointmentDate: z.string().min(1, '請選擇預約日期'),
 });
 
