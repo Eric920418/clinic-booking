@@ -110,7 +110,17 @@ export default function ConfirmBookingPage() {
         return;
       }
 
-      // 清除 sessionStorage 中的預約流程資料
+      // 儲存預約結果供成功頁顯示
+      sessionStorage.setItem('appointmentResult', JSON.stringify({
+        id: result.data.id,
+        doctor: bookingData.doctor,
+        date: bookingData.date,
+        timeSlot: bookingData.timeSlot,
+        treatment: bookingData.treatment,
+        profile: bookingData.profile,
+      }));
+
+      // 清除預約流程資料
       sessionStorage.removeItem('selectedDoctor');
       sessionStorage.removeItem('selectedDate');
       sessionStorage.removeItem('selectedTimeSlot');

@@ -27,20 +27,19 @@ export default function BookingSuccessPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
-    // 從 sessionStorage 讀取預約資料（實際應從 API 取得）
-    const doctorStr = sessionStorage.getItem('selectedDoctor');
-    const dateStr = sessionStorage.getItem('selectedDate');
-    const timeSlotStr = sessionStorage.getItem('selectedTimeSlot');
-    const treatmentStr = sessionStorage.getItem('selectedTreatment');
-    const profileStr = sessionStorage.getItem('profileData');
+    // 從 sessionStorage 讀取預約結果
+    const resultStr = sessionStorage.getItem('appointmentResult');
 
-    setAppointmentData({
-      doctor: doctorStr ? JSON.parse(doctorStr) : null,
-      date: dateStr ? new Date(dateStr) : null,
-      timeSlot: timeSlotStr ? JSON.parse(timeSlotStr) : null,
-      treatment: treatmentStr ? JSON.parse(treatmentStr) : null,
-      profile: profileStr ? JSON.parse(profileStr) : null,
-    });
+    if (resultStr) {
+      const result = JSON.parse(resultStr);
+      setAppointmentData({
+        doctor: result.doctor,
+        date: result.date ? new Date(result.date) : null,
+        timeSlot: result.timeSlot,
+        treatment: result.treatment,
+        profile: result.profile,
+      });
+    }
   }, []);
 
   // 格式化日期
