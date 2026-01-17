@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface AppointmentData {
+  id: string | null;
   doctor: { id: string; name: string } | null;
   date: Date | null;
   timeSlot: { id: string; time: string } | null;
@@ -18,6 +19,7 @@ interface AppointmentData {
 export default function BookingSuccessPage() {
   const router = useRouter();
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
+    id: null,
     doctor: null,
     date: null,
     timeSlot: null,
@@ -25,6 +27,7 @@ export default function BookingSuccessPage() {
     profile: null,
   });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     // 從 sessionStorage 讀取預約結果
@@ -33,6 +36,7 @@ export default function BookingSuccessPage() {
     if (resultStr) {
       const result = JSON.parse(resultStr);
       setAppointmentData({
+        id: result.id,
         doctor: result.doctor,
         date: result.date ? new Date(result.date) : null,
         timeSlot: result.timeSlot,
@@ -61,12 +65,36 @@ export default function BookingSuccessPage() {
 
   // 取消預約
   const handleCancel = async () => {
-    // TODO: 實際呼叫 API 取消預約
-    // await fetch('/api/liff/appointments/cancel', { method: 'POST' });
+    if (!appointmentData.id) {
+      alert('無法取消預約：找不到預約資料');
+      return;
+    }
 
-    // 清除資料並跳轉到取消完成頁
-    sessionStorage.clear();
-    router.push('/liff/booking/cancelled');
+    setIsCancelling(true);
+
+    try {
+      const response = await fetch(`/api/liff/appointments/${appointmentData.id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        alert(result.error?.message || '取消預約失敗');
+        setIsCancelling(false);
+        setShowCancelConfirm(false);
+        return;
+      }
+
+      // 清除資料並跳轉到取消完成頁
+      sessionStorage.removeItem('appointmentResult');
+      router.push('/liff/booking/cancelled');
+    } catch (error) {
+      console.error('取消預約失敗:', error);
+      alert('取消預約失敗，請稍後再試');
+      setIsCancelling(false);
+      setShowCancelConfirm(false);
+    }
   };
 
   const { date: dateStr, weekday } = formatDateShort(appointmentData.date);
@@ -163,15 +191,17 @@ export default function BookingSuccessPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="w-full h-12 bg-error hover:bg-error-700 text-white font-bold text-base rounded-xl transition-all"
+                disabled={isCancelling}
+                className="w-full h-12 bg-error hover:bg-error-700 disabled:bg-neutral-300 text-white font-bold text-base rounded-xl transition-all"
               >
-                確認取消
+                {isCancelling ? '取消中...' : '確認取消'}
               </button>
               {/* 我在想想按鈕 */}
               <button
                 type="button"
                 onClick={() => setShowCancelConfirm(false)}
-                className="w-full h-12 bg-white hover:bg-neutral-50 text-neutral-700 font-medium text-base rounded-xl border border-neutral-300 transition-all"
+                disabled={isCancelling}
+                className="w-full h-12 bg-white hover:bg-neutral-50 disabled:opacity-50 text-neutral-700 font-medium text-base rounded-xl border border-neutral-300 transition-all"
               >
                 我在想想
               </button>
