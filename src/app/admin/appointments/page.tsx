@@ -1,11 +1,11 @@
 /**
  * 管理後台 - 預約排程
  * 顯示預約列表，支援搜尋、多選篩選、出席管理
- * 使用 SWR 進行資料快取
+ * 使用 SWR 進行資料快取和 Supabase Realtime 即時更新
  */
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Search,
   Calendar,
@@ -17,6 +17,7 @@ import {
 import EditAppointmentModal from '@/components/admin/EditAppointmentModal';
 import { useDoctors, useAppointments, type Doctor } from '@/lib/api';
 import { useAddAppointment } from '@/contexts/AddAppointmentContext';
+import { useRealtimeAppointments } from '@/hooks/useRealtimeAppointments';
 
 // 預約類型
 interface Appointment {
@@ -209,6 +210,16 @@ export default function AppointmentsPage() {
   }), [selectedDate, selectedDoctors, selectedStatuses]);
 
   const { data: appointmentsData, error: swrError, isLoading, mutate } = useAppointments(appointmentFilters);
+
+  // Supabase Realtime：當有預約變更時自動刷新資料
+  const handleRealtimeChange = useCallback(() => {
+    console.log('[Realtime] 預約變更，刷新資料...');
+    mutate();
+  }, [mutate]);
+
+  useRealtimeAppointments({
+    onChange: handleRealtimeChange,
+  });
 
   // 轉換預約資料格式
   const appointments: Appointment[] = useMemo(() => {

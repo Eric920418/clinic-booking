@@ -1,11 +1,11 @@
 /**
  * 管理後台 Dashboard - 數據概覽
  * 顯示今日預約統計和預約列表
- * 使用 SWR 進行資料快取和即時更新
+ * 使用 SWR 進行資料快取和 Supabase Realtime 即時更新
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Calendar,
   CheckCircle,
@@ -16,6 +16,7 @@ import {
 import EditPatientModal from '@/components/admin/EditPatientModal';
 import { useDashboard, type Doctor } from '@/lib/api';
 import { useAddAppointment } from '@/contexts/AddAppointmentContext';
+import { useRealtimeAppointments } from '@/hooks/useRealtimeAppointments';
 
 // 預約類型（從 API 返回的格式）
 interface DashboardAppointment {
@@ -62,6 +63,16 @@ export default function DashboardPage() {
 
   // 使用 SWR hook 獲取 Dashboard 資料（包含醫師、統計、預約）
   const { data, error, isLoading, mutate } = useDashboard(selectedDoctorId);
+
+  // Supabase Realtime：當有預約變更時自動刷新資料
+  const handleRealtimeChange = useCallback(() => {
+    console.log('[Realtime] 預約變更，刷新資料...');
+    mutate();
+  }, [mutate]);
+
+  useRealtimeAppointments({
+    onChange: handleRealtimeChange,
+  });
 
   // 從 data 中解構資料
   const doctors = data?.doctors || [];
