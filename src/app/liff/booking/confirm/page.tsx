@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar, Clock, User, MapPin, Phone } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface BookingData {
   doctor: { id: string; name: string } | null;
@@ -84,7 +85,7 @@ export default function ConfirmBookingPage() {
       // 清理電話號碼格式（移除橫線）以符合 API 驗證規則
       const cleanPhone = bookingData.profile.phone.replace(/\D/g, '');
 
-      const response = await fetch('/api/liff/appointments', {
+      const response = await apiFetch('/api/liff/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

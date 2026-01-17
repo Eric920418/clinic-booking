@@ -11,7 +11,7 @@ import EditTreatmentModal from '@/components/admin/EditTreatmentModal';
 import DeleteDoctorModal from '@/components/admin/DeleteDoctorModal';
 import EditAccountModal from '@/components/admin/EditAccountModal';
 import AddAppointmentModal from '@/components/admin/AddAppointmentModal';
-import { useSettings } from '@/lib/api';
+import { useSettings, apiFetch } from '@/lib/api';
 
 // 分頁類型
 type TabType = 'accounts' | 'resources';
@@ -151,7 +151,7 @@ export default function SettingsPage() {
     if (!doctorName.trim()) return;
 
     try {
-      const response = await fetch('/api/admin/doctors', {
+      const response = await apiFetch('/api/admin/doctors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -187,7 +187,7 @@ export default function SettingsPage() {
     if (deletingDoctorId) {
       try {
         // 呼叫停用 API（軟刪除）
-        const response = await fetch(`/api/admin/doctors/${deletingDoctorId}/disable`, {
+        const response = await apiFetch(`/api/admin/doctors/${deletingDoctorId}/disable`, {
           method: 'POST',
         });
 
@@ -244,7 +244,7 @@ export default function SettingsPage() {
     if (!editingDoctorId || !editingDoctorName.trim()) return;
 
     try {
-      const response = await fetch(`/api/admin/doctors/${editingDoctorId}`, {
+      const response = await apiFetch(`/api/admin/doctors/${editingDoctorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -272,7 +272,7 @@ export default function SettingsPage() {
     if (!treatmentName.trim()) return;
 
     try {
-      const response = await fetch('/api/admin/treatments', {
+      const response = await apiFetch('/api/admin/treatments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: treatmentName, durationMinutes: treatmentMinutes }),
@@ -302,7 +302,7 @@ export default function SettingsPage() {
   const handleSaveTreatment = async (treatmentData: { id: string; name: string; minutes: number }) => {
     try {
       // 呼叫 API 更新診療項目
-      const response = await fetch(`/api/admin/treatments/${treatmentData.id}`, {
+      const response = await apiFetch(`/api/admin/treatments/${treatmentData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ durationMinutes: treatmentData.minutes }),
@@ -326,7 +326,7 @@ export default function SettingsPage() {
   const handleDeleteTreatment = async (id: string) => {
     try {
       // 呼叫停用 API（軟刪除）
-      const response = await fetch(`/api/admin/treatments/${id}/disable`, {
+      const response = await apiFetch(`/api/admin/treatments/${id}/disable`, {
         method: 'POST',
       });
 
@@ -356,7 +356,7 @@ export default function SettingsPage() {
     if (!accountUsername.trim() || !accountPassword.trim()) return;
 
     try {
-      const response = await fetch('/api/admin/accounts', {
+      const response = await apiFetch('/api/admin/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -387,7 +387,7 @@ export default function SettingsPage() {
   // 刪除帳號
   const handleDeleteAccount = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/accounts/${id}/disable`, {
+      const response = await apiFetch(`/api/admin/accounts/${id}/disable`, {
         method: 'POST',
       });
 
@@ -416,7 +416,7 @@ export default function SettingsPage() {
   // 儲存帳號
   const handleSaveAccount = async (accountData: { id: string; username: string; role: string; newPassword?: string }) => {
     try {
-      const response = await fetch(`/api/admin/accounts/${accountData.id}`, {
+      const response = await apiFetch(`/api/admin/accounts/${accountData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

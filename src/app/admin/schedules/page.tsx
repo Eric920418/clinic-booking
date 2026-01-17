@@ -14,7 +14,7 @@ import {
   Info,
   X,
 } from 'lucide-react';
-import { useSettings, useSchedules, type Doctor, type Schedule, type TimeSlot } from '@/lib/api';
+import { useSettings, useSchedules, apiFetch, type Doctor, type Schedule, type TimeSlot } from '@/lib/api';
 
 // 時段選項
 const TIME_SLOT_OPTIONS = [
@@ -304,7 +304,7 @@ export default function SchedulesPage() {
         for (const day of selectedDates) {
           for (const timeSlotType of selectedTimeSlots) {
             const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const response = await fetch('/api/admin/schedules', {
+            const response = await apiFetch('/api/admin/schedules', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -366,7 +366,7 @@ export default function SchedulesPage() {
         for (const day of selectedDates) {
           for (const timeSlotType of selectedTimeSlots) {
             const dateStr = `${westernYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const response = await fetch('/api/admin/schedules', {
+            const response = await apiFetch('/api/admin/schedules', {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -419,7 +419,7 @@ export default function SchedulesPage() {
         const daySchedules = schedules.filter((s) => s.date === dateStr);
         for (const schedule of daySchedules) {
           if (schedule.isAvailable) {
-            const response = await fetch(`/api/admin/schedules/${schedule.id}`, {
+            const response = await apiFetch(`/api/admin/schedules/${schedule.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ isAvailable: false }),

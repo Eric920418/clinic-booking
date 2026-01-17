@@ -15,6 +15,20 @@
 | LINE 整合 | LIFF v2 |
 | 驗證機制 | LINE Login（病患）/ JWT + bcrypt（管理員）|
 
+### Token 過期自動跳轉
+
+當 API 返回 401 未授權錯誤（Token 過期）時，系統會自動跳轉到對應的登入頁面：
+
+| 路由 | 跳轉目標 |
+|------|----------|
+| `/admin/*` | `/admin/login` |
+| `/liff/*` | `/liff` |
+
+實作方式：
+- `src/lib/api.ts` 中的 `apiFetch` 和 `fetcher` 函數統一處理 401 響應
+- 所有 API 請求都應使用 `apiFetch` 以確保 Token 過期時能正確跳轉
+- Admin Layout 的 `authFetcher` 也包含 401 處理邏輯
+
 ## 系統角色
 
 | 角色 | 說明 |

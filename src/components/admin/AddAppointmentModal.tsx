@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { X, Search, ChevronDown, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { apiFetch } from '@/lib/api';
 
 interface AddAppointmentModalProps {
   isOpen: boolean;
@@ -84,8 +85,8 @@ export default function AddAppointmentModal({
       setLoading(true);
       try {
         const [doctorsRes, treatmentsRes] = await Promise.all([
-          fetch('/api/liff/doctors'),
-          fetch('/api/liff/treatment-types'),
+          apiFetch('/api/liff/doctors'),
+          apiFetch('/api/liff/treatment-types'),
         ]);
 
         if (doctorsRes.ok) {
@@ -136,7 +137,7 @@ export default function AddAppointmentModal({
           dateStr = `${year}-${month}-${day}`;
         }
 
-        const response = await fetch(
+        const response = await apiFetch(
           `/api/liff/time-slots?doctorId=${selectedDoctor}&date=${dateStr}`
         );
 
@@ -164,7 +165,7 @@ export default function AddAppointmentModal({
 
     const fetchPatients = async () => {
       try {
-        const response = await fetch('/api/admin/appointments');
+        const response = await apiFetch('/api/admin/appointments');
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {

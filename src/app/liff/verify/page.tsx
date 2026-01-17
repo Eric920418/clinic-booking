@@ -8,6 +8,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { AlertCircle, ArrowLeft, Clock, RefreshCw } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 export default function VerifyPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function VerifyPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/liff/verify/send', {
+      const response = await apiFetch('/api/liff/verify/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lineUserId: userId }),
@@ -123,7 +124,7 @@ export default function VerifyPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/liff/verify/check', {
+      const response = await apiFetch('/api/liff/verify/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lineUserId, code: codeStr }),

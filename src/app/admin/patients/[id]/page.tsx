@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Search, Trash2 } from 'lucide-react';
 import DeleteRecordModal from '@/components/admin/DeleteRecordModal';
+import { apiFetch } from '@/lib/api';
 
 // 歷史記錄類型
 interface HistoryRecord {
@@ -55,7 +56,7 @@ export default function PatientHistoryPage() {
     const fetchHistory = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/admin/appointments?limit=100');
+        const response = await apiFetch('/api/admin/appointments?limit=100');
         const result = await response.json();
 
         if (result.success && result.data?.items) {
@@ -125,7 +126,7 @@ export default function PatientHistoryPage() {
   const handleConfirmDelete = async () => {
     if (deletingRecordId) {
       try {
-        const response = await fetch(`/api/admin/appointments/${deletingRecordId}`, {
+        const response = await apiFetch(`/api/admin/appointments/${deletingRecordId}`, {
           method: 'DELETE',
         });
         if (response.ok) {

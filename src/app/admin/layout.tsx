@@ -29,9 +29,19 @@ const NAV_ITEMS = [
   { href: '/admin/settings', label: '系統設定', icon: Settings },
 ];
 
-// SWR fetcher for auth
+// SWR fetcher for auth - 處理 401 自動跳轉登入頁
 const authFetcher = async (url: string) => {
   const res = await fetch(url);
+
+  // 處理 401 未授權 - Token 過期
+  if (res.status === 401) {
+    // 強制跳轉到登入頁
+    if (typeof window !== 'undefined' && window.location.pathname !== '/admin/login') {
+      window.location.href = '/admin/login';
+    }
+    return null;
+  }
+
   if (!res.ok) return null;
   const json = await res.json();
   return json.success ? json.data : null;

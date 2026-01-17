@@ -7,6 +7,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Circle, CheckCircle2 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 // 診療項目型別
 interface TreatmentType {
@@ -41,7 +42,7 @@ export default function SelectDoctorAndDatePage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('/api/liff/doctors');
+        const response = await apiFetch('/api/liff/doctors');
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {

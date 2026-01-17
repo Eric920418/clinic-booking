@@ -4,9 +4,58 @@
  */
 import useSWR, { SWRConfiguration } from 'swr';
 
+/**
+ * 處理 401 未授權錯誤，重定向到登入頁面
+ * - Admin 路由 → /admin/login
+ * - LIFF 路由 → /liff
+ */
+export const handleUnauthorized = () => {
+  if (typeof window === 'undefined') return;
+
+  const currentPath = window.location.pathname;
+
+  // 判斷是後台還是前台
+  if (currentPath.startsWith('/admin')) {
+    // 後台：跳轉到後台登入頁
+    if (currentPath !== '/admin/login') {
+      window.location.href = '/admin/login';
+    }
+  } else if (currentPath.startsWith('/liff')) {
+    // 前台：跳轉到 LIFF 首頁（登入頁）
+    if (currentPath !== '/liff') {
+      window.location.href = '/liff';
+    }
+  }
+};
+
+/**
+ * 通用 API fetch 包裝函數
+ * 自動處理 401 未授權錯誤並重定向到登入頁面
+ */
+export const apiFetch = async (
+  url: string,
+  options?: RequestInit
+): Promise<Response> => {
+  const response = await fetch(url, options);
+
+  // 處理 401 未授權
+  if (response.status === 401) {
+    handleUnauthorized();
+  }
+
+  return response;
+};
+
 // 通用 fetcher
 export const fetcher = async <T>(url: string): Promise<T> => {
   const res = await fetch(url);
+
+  // 處理 401 未授權
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new Error('登入已過期，請重新登入');
+  }
+
   if (!res.ok) {
     const error = new Error('API 請求失敗');
     throw error;
